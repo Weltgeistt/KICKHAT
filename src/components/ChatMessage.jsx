@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useChatStore, pickSubscriberBadge } from '../store/chatStore';
@@ -323,7 +323,16 @@ export default function ChatMessage({ message }) {
   const [timeoutModal, setTimeoutModal] = useState(false);
   const [infoModal, setInfoModal] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
   const [actionLoading, setActionLoading] = useState(null); // 'ban' | 'delete'
+
+  // Context menüyü dışarı tıklayınca kapatma
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [contextMenu]);
 
   const renderContent = (content) => {
     if (!content) return null;
@@ -415,8 +424,7 @@ export default function ChatMessage({ message }) {
   const handleContextMenu = useCallback((e) => {
     e.preventDefault();
     if (!message.content || message.deleted) return;
-    const query = encodeURIComponent(message.content);
-    openExternal(`https://www.google.com/search?q=${query}`);
+    setContextMenu({ x: e.clientX, y: e.clientY });
   }, [message.content, message.deleted]);
 
   return (
@@ -573,6 +581,47 @@ export default function ChatMessage({ message }) {
           onBan={handleBan}
           onTimeout={() => { setInfoModal(false); setTimeoutModal(true); }}
         />
+      )}
+
+      {/* Özel Sağ Tık Menüsü */}
+      {contextMenu && (
+        <div style={{
+          position: 'fixed',
+          top: contextMenu.y,
+          left: contextMenu.x,
+          background: 'var(--bg-panel)',
+          border: '1px solid var(--border)',
+          borderRadius: '6px',
+          padding: '4px 0',
+          zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          minWidth: '160px'
+        }}>
+          <button 
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              textAlign: 'left',
+              background: 'transparent',
+              color: 'var(--text-primary)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-input)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            onClick={() => {
+              const query = encodeURIComponent(message.content);
+              openExternal(`https://www.google.com/search?q=${query}`);
+              setContextMenu(null);
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>🔍</span> Tarayıcıda Ara
+          </button>
+        </div>
       )}
     </>
   );
