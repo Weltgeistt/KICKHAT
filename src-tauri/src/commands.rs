@@ -324,6 +324,33 @@ pub async fn get_user_info(username: String) -> Result<serde_json::Value, String
     Ok(json)
 }
 
+/// Kullanıcının o kanaldaki (mod/yayıncı yetkisiyle görülebilen) mesaj geçmişini getirir
+#[tauri::command]
+pub async fn get_user_channel_messages(
+    channel_slug: String,
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let token = state.auth_token.lock().unwrap().clone();
+    let client = build_client(token.as_deref());
+
+    // Kick'in kendi moderasyon API'si:
+    let url = format!(
+        "https://kick.com/api/v2/channels/{}/users/{}/messages",
+        channel_slug, username
+    );
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Mesaj geçmişi alınamadı: {}", e))?;
+
+    let json: serde_json::Value = res.json().await.unwrap_or(serde_json::json!({}));
+
+    Ok(json)
+}
+
 /// Mesaj gönder
 #[tauri::command]
 pub async fn send_chat_message(

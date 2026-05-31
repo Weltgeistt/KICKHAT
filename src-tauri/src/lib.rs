@@ -23,6 +23,7 @@ pub fn run() {
             commands::toggle_slow_mode,
             commands::toggle_subscribers_mode,
             commands::get_user_info,
+            commands::get_user_channel_messages,
             commands::send_chat_message,
         ])
         .run(tauri::generate_context!())

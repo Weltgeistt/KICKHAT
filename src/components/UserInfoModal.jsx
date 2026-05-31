@@ -7,8 +7,11 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
   const [loading, setLoading] = useState(true);
   const [globalHistory, setGlobalHistory] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
-  const messages = useChatStore((s) => s.messages);
-  const userMessages = messages.filter((m) => m.username === username);
+  const [historicalMessages, setHistoricalMessages] = useState(null);
+  const [fetchingHistory, setFetchingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+
+  const channelSlug = useChatStore((s) => s.channelSlug);
 
   useEffect(() => {
     invoke('get_user_info', { username })
@@ -114,26 +117,51 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   opacity: 0.9,
                   justifyContent: 'center'
                 }}
-                onClick={() => setShowHistory(!showHistory)}
+                disabled={fetchingHistory}
+                onClick={async () => {
+                  if (historicalMessages) {
+                    setShowHistory(!showHistory);
+                    return;
+                  }
+                  setFetchingHistory(true);
+                  setShowHistory(true);
+                  setHistoryError(null);
+                  try {
+                    const res = await invoke('get_user_channel_messages', { channelSlug, username });
+                    let msgs = [];
+                    if (Array.isArray(res)) msgs = res;
+                    else if (res.data && Array.isArray(res.data.messages)) msgs = res.data.messages;
+                    else if (Array.isArray(res.messages)) msgs = res.messages;
+                    else if (res.data && Array.isArray(res.data)) msgs = res.data;
+                    setHistoricalMessages(msgs);
+                  } catch (e) {
+                    setHistoryError(String(e));
+                  } finally {
+                    setFetchingHistory(false);
+                  }
+                }}
               >
-                {showHistory ? 'Geçmişi Gizle' : '📜 Bu Kanaldaki Mesaj Geçmişini Gör'}
+                {showHistory ? 'Geçmişi Gizle' : '📜 Gelmiş Geçmiş Tüm Mesajlarını Gör'}
               </button>
 
               {showHistory && (
-                <div style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflowY: 'auto', maxHeight: '200px', border: '1px solid var(--border)', background: 'var(--bg-base)', padding: '8px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {userMessages.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>Bu oturumda henüz mesajı yok.</div>
+                <div style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflowY: 'auto', maxHeight: '250px', border: '1px solid var(--border)', background: 'var(--bg-base)', padding: '8px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {fetchingHistory ? (
+                    <div style={{ textAlign: 'center', padding: '10px' }}><span className="spinner" style={{ width: 16, height: 16, display: 'inline-block', verticalAlign: 'middle' }}/> Yükleniyor...</div>
+                  ) : historyError ? (
+                    <div style={{ color: 'var(--mod-timeout)', padding: '10px' }}>Geçmiş alınamadı (Yetkiniz olmayabilir veya kanal gizli).<br/><span style={{opacity:0.5}}>{historyError}</span></div>
+                  ) : historicalMessages && historicalMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>Bu kanalda geçmiş mesajı yok.</div>
                   ) : (
-                    userMessages.map(m => (
-                      <div key={m.id} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word' }}>
-                        <span style={{ color: 'var(--text-muted)', fontSize: '10px', marginRight: '6px' }}>
-                          {new Date(m.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>
-                          {m.content}
-                        </span>
-                      </div>
-                    ))
+                    historicalMessages?.map((m, i) => {
+                      const timeStr = new Date(m.created_at || m.timestamp || m.updated_at || Date.now()).toLocaleString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                      return (
+                        <div key={m.id || i} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word', paddingBottom: '4px', borderBottom: '1px solid var(--border-dim)' }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '2px' }}>{timeStr}</div>
+                          <div style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>{m.content}</div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               )}
