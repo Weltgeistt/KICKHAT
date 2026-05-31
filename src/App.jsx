@@ -27,11 +27,9 @@ export default function App() {
     }
   }, [setAuthToken]);
 
-  // Otomatik Güncelleme Denetimi
   useEffect(() => {
     if (settings.autoUpdateEnabled) {
       const { checkUpdate } = useChatStore.getState();
-      // Uygulama açılışını yavaşlatmamak için 5 saniye sonra kontrol et
       const timer = setTimeout(() => {
         checkUpdate(false).catch(console.error);
       }, 5000);

@@ -7,7 +7,6 @@ const child = spawn('npx', ['tauri', 'signer', 'generate', '-w', 'src-tauri/kick
   stdio: ['pipe', 'inherit', 'inherit']
 });
 
-// Şifre sorma aşamasını atlamak için boş enter gönder
 child.stdin.write('\n');
 setTimeout(() => {
   child.stdin.write('\n');
