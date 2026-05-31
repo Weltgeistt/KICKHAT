@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const Pusher = require('pusher-js');
+const { Pusher } = require('pusher-js');
 const { initDB, saveMessage, markMessageDeleted, getUserMessages } = require('./db');
 
 const app = express();
