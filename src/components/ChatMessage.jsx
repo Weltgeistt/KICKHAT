@@ -411,12 +411,22 @@ export default function ChatMessage({ message }) {
     }
   }, [chatroomId, message.id, actionLoading]);
 
+  // ── Tarayıcıda Ara (Sağ Tık) ─────────────────────────────────────────
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault();
+    if (!message.content || message.deleted) return;
+    const query = encodeURIComponent(message.content);
+    openExternal(`https://www.google.com/search?q=${query}`);
+  }, [message.content, message.deleted]);
+
   return (
     <>
       <div
         className={`chat-message new-message ${message.deleted ? 'deleted' : ''} ${isFeatured ? 'is-featured' : ''}`}
         data-message-id={message.id}
         data-username={message.username}
+        onContextMenu={handleContextMenu}
+        title="Tarayıcıda aramak için sağ tıklayın"
       >
         {/* Timestamp */}
         <span className="msg-timestamp">{formatTime(message.timestamp)}</span>
