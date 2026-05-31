@@ -24,6 +24,7 @@ fn main() {
             commands::toggle_slow_mode,
             commands::toggle_subscribers_mode,
             commands::get_user_info,
+            commands::get_user_channel_messages,
             commands::send_chat_message,
             commands::fetch_global_history,
             commands::fetch_turkey_trends,
