@@ -1,0 +1,47 @@
+name: Release KICKHAT
+
+on:
+  push:
+    tags:
+      - 'v*' # Sadece v1.0.0 gibi bir versiyon tag'i attığınızda otomatik tetiklenir.
+  workflow_dispatch: # Veya GitHub üzerinden manuel olarak "Run workflow" tuşuna basabilirsiniz.
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest] # Şu an Windows için ayarlı
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Kodu İndir (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Node.js Kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rust Kurulumu
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Bağımlılıkları Yükle (NPM)
+        run: npm install
+
+      - name: Tauri Derleme ve Yayınlama (Build & Release)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }} # Anahtar şifreniz
+        with:
+          tagName: v__VERSION__
+          releaseName: "KICKHAT v__VERSION__"
+          releaseBody: "Otomatik güncellemeler ve iyileştirmeler eklendi."
+          releaseDraft: true # Yayın taslak olarak oluşur, GitHub'a girip onaylamanız gerekir
+          prerelease: false
