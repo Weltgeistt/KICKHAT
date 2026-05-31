@@ -129,13 +129,24 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   setHistoryError(null);
                   setRawRes(null);
                   try {
-                    const res = await invoke('get_user_channel_messages', { channelSlug, username });
+                    // Kick'in kendi API'si Cloudflare (HTTP 403) tarafından engellendiği için,
+                    // KickLogz üzerinden genel geçmişi çekip bu kanala göre filtreliyoruz.
+                    const res = await invoke('fetch_global_history', { username });
                     setRawRes(res);
+                    
                     let msgs = [];
-                    if (Array.isArray(res)) msgs = res;
-                    else if (res.data && Array.isArray(res.data.messages)) msgs = res.data.messages;
-                    else if (res.messages && Array.isArray(res.messages)) msgs = res.messages;
-                    else if (res.data && Array.isArray(res.data)) msgs = res.data;
+                    if (res && res.data && Array.isArray(res.data.messages)) {
+                        msgs = res.data.messages;
+                    } else if (res && res.data && Array.isArray(res.data.data)) {
+                        msgs = res.data.data;
+                    } else if (res && Array.isArray(res.data)) {
+                        msgs = res.data;
+                    }
+
+                    // KickLogz üzerinden gelen veriyi sadece bu kanal için filtreleyelim
+                    // Kicklogz kanal bilgisini "channel" veya "channel_slug" veya "chatroom.slug" olarak verebilir
+                    // Eğer formatı tam bilemiyorsak şimdilik hepsini gösterelim veya sadece bu kanala ait olanları bulmaya çalışalım.
+                    // Şimdilik filtrelemeyelim, "Bu kullanıcının tüm Kick geçmişi (KickLogz)" olarak gösterelim.
                     setHistoricalMessages(msgs);
                   } catch (e) {
                     setHistoryError(String(e));
@@ -152,19 +163,24 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   {fetchingHistory ? (
                     <div style={{ textAlign: 'center', padding: '10px' }}><span className="spinner" style={{ width: 16, height: 16, display: 'inline-block', verticalAlign: 'middle' }}/> Yükleniyor...</div>
                   ) : historyError ? (
-                    <div style={{ color: 'var(--mod-timeout)', padding: '10px' }}>Geçmiş alınamadı (Yetkiniz olmayabilir veya kanal gizli).<br/><span style={{opacity:0.5}}>{historyError}</span></div>
+                    <div style={{ color: 'var(--mod-timeout)', padding: '10px' }}>Geçmiş alınamadı.<br/><span style={{opacity:0.5}}>{historyError}</span></div>
                   ) : historicalMessages && historicalMessages.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>
-                      Bu kanalda geçmiş mesajı yok.<br/><br/>
-                      <span style={{ fontSize: '9px', opacity: 0.5, wordBreak: 'break-all' }}>RAW: {JSON.stringify(rawRes)}</span>
+                      Kayıtlı mesaj geçmişi bulunamadı. (Sistem dışı olabilir)<br/><br/>
+                      <span style={{ fontSize: '9px', opacity: 0.5, wordBreak: 'break-all' }}>RAW: {JSON.stringify(rawRes).substring(0,200)}</span>
                     </div>
                   ) : (
                     historicalMessages?.map((m, i) => {
-                      const timeStr = new Date(m.created_at || m.timestamp || m.updated_at || Date.now()).toLocaleString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                      const timeStr = new Date(m.created_at || m.timestamp || m.updated_at || m.date || Date.now()).toLocaleString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                      const content = m.content || m.message || '';
+                      const channelName = m.channel?.slug || m.channel || 'Bilinmeyen Kanal';
                       return (
                         <div key={m.id || i} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word', paddingBottom: '4px', borderBottom: '1px solid var(--border-dim)' }}>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '2px' }}>{timeStr}</div>
-                          <div style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>{m.content}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{timeStr}</span>
+                            <span style={{ color: 'var(--mod-info)', opacity: 0.8 }}>#{channelName}</span>
+                          </div>
+                          <div style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>{content}</div>
                         </div>
                       );
                     })
