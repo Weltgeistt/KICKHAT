@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useChatStore } from '../store/chatStore';
 
 export default function UserInfoModal({ username, color, onClose, onBan, onTimeout }) {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [globalHistory, setGlobalHistory] = useState(null);
-  const [fetchingHistory, setFetchingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const messages = useChatStore((s) => s.messages);
+  const userMessages = messages.filter((m) => m.username === username);
 
   useEffect(() => {
     invoke('get_user_info', { username })
@@ -111,21 +114,27 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   opacity: 0.9,
                   justifyContent: 'center'
                 }}
-                disabled={fetchingHistory}
-                onClick={() => setFetchingHistory(true)}
+                onClick={() => setShowHistory(!showHistory)}
               >
-                {fetchingHistory ? 'İframe Yükleniyor...' : '🔍 Uygulama İçi Global Chat Ara'}
+                {showHistory ? 'Geçmişi Gizle' : '📜 Bu Kanaldaki Mesaj Geçmişini Gör'}
               </button>
 
-              {fetchingHistory && (
-                <div style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <iframe
-                    src={`https://kicklogz.com/search?q=${username}`}
-                    width="100%"
-                    height="300px"
-                    style={{ border: 'none', background: 'var(--bg-base)' }}
-                    title="Global History"
-                  />
+              {showHistory && (
+                <div style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflowY: 'auto', maxHeight: '200px', border: '1px solid var(--border)', background: 'var(--bg-base)', padding: '8px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {userMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>Bu oturumda henüz mesajı yok.</div>
+                  ) : (
+                    userMessages.map(m => (
+                      <div key={m.id} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '10px', marginRight: '6px' }}>
+                          {new Date(m.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>
+                          {m.content}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
