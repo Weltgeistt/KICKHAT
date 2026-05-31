@@ -346,7 +346,18 @@ pub async fn get_user_channel_messages(
         .await
         .map_err(|e| format!("Mesaj geçmişi alınamadı: {}", e))?;
 
-    let json: serde_json::Value = res.json().await.unwrap_or(serde_json::json!({}));
+    let status = res.status();
+    let text = res.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        return Err(format!(
+            "HTTP {} - {}",
+            status.as_u16(),
+            text
+        ));
+    }
+
+    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::json!({}));
 
     Ok(json)
 }

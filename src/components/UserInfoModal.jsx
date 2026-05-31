@@ -10,6 +10,7 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
   const [historicalMessages, setHistoricalMessages] = useState(null);
   const [fetchingHistory, setFetchingHistory] = useState(false);
   const [historyError, setHistoryError] = useState(null);
+  const [rawRes, setRawRes] = useState(null);
 
   const channelSlug = useChatStore((s) => s.channelSlug);
 
@@ -126,12 +127,14 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   setFetchingHistory(true);
                   setShowHistory(true);
                   setHistoryError(null);
+                  setRawRes(null);
                   try {
                     const res = await invoke('get_user_channel_messages', { channelSlug, username });
+                    setRawRes(res);
                     let msgs = [];
                     if (Array.isArray(res)) msgs = res;
                     else if (res.data && Array.isArray(res.data.messages)) msgs = res.data.messages;
-                    else if (Array.isArray(res.messages)) msgs = res.messages;
+                    else if (res.messages && Array.isArray(res.messages)) msgs = res.messages;
                     else if (res.data && Array.isArray(res.data)) msgs = res.data;
                     setHistoricalMessages(msgs);
                   } catch (e) {
@@ -151,7 +154,10 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   ) : historyError ? (
                     <div style={{ color: 'var(--mod-timeout)', padding: '10px' }}>Geçmiş alınamadı (Yetkiniz olmayabilir veya kanal gizli).<br/><span style={{opacity:0.5}}>{historyError}</span></div>
                   ) : historicalMessages && historicalMessages.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>Bu kanalda geçmiş mesajı yok.</div>
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>
+                      Bu kanalda geçmiş mesajı yok.<br/><br/>
+                      <span style={{ fontSize: '9px', opacity: 0.5, wordBreak: 'break-all' }}>RAW: {JSON.stringify(rawRes)}</span>
+                    </div>
                   ) : (
                     historicalMessages?.map((m, i) => {
                       const timeStr = new Date(m.created_at || m.timestamp || m.updated_at || Date.now()).toLocaleString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
