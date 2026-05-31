@@ -81,5 +81,5 @@ KICKHAT sürekli gelişen bir projedir. Fikirlerinizi paylaşmak veya kod katkı
 ---
 
 <p align="center">
-  <i>Geliştirici: <b><a href="https://github.com/Weltgeistt">Weltgeistt (Adem Poyraz)</a></b></i>
+  <i>Geliştiriciler: <b><a href="https://github.com/ademiru">Ademiru</a></b> & <b><a href="https://github.com/Weltgeistt">Poyland</a></b></i>
 </p>
