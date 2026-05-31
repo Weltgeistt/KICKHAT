@@ -985,6 +985,19 @@ Beklenen JSON Formatı:
 
     set({ connecting: true });
 
+    // Botumuzu da bu kanala dahil edelim
+    const channelSlug = get().channelSlug;
+    if (channelSlug && chatroomId) {
+      fetch(`${import.meta.env.VITE_BOT_API_URL || 'http://localhost:3000'}/api/bot/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_BOT_API_KEY || 'kickhat-secret-key-123'
+        },
+        body: JSON.stringify({ channelSlug, chatroomId })
+      }).catch(err => console.log('Bot connection error:', err));
+    }
+
     // Pusher'ı dinamik olarak import et
     import('pusher-js').then(({ default: Pusher }) => {
       pusherInstance = new Pusher('32cbd69e4b950bf97679', {

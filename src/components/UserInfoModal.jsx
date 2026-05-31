@@ -6,10 +6,12 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [historicalMessages, setHistoricalMessages] = useState(null);
+  const [fetchingHistory, setFetchingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
 
   const channelSlug = useChatStore((s) => s.channelSlug);
   const messages = useChatStore((s) => s.messages);
-  const userMessages = messages.filter((m) => m.username === username);
 
   useEffect(() => {
     invoke('get_user_info', { username })
@@ -115,28 +117,58 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                   opacity: 0.9,
                   justifyContent: 'center'
                 }}
-                onClick={() => setShowHistory(!showHistory)}
+                disabled={fetchingHistory}
+                onClick={async () => {
+                  if (historicalMessages) {
+                    setShowHistory(!showHistory);
+                    return;
+                  }
+                  setFetchingHistory(true);
+                  setShowHistory(true);
+                  setHistoryError(null);
+                  try {
+                    const botUrl = import.meta.env.VITE_BOT_API_URL || 'http://localhost:3000';
+                    const botKey = import.meta.env.VITE_BOT_API_KEY || 'kickhat-secret-key-123';
+                    
+                    const res = await fetch(`${botUrl}/api/history/${channelSlug}/${username}?key=${botKey}`);
+                    if (!res.ok) {
+                      throw new Error('Bot API yanıt vermedi veya yetkisiz istek.');
+                    }
+                    const msgs = await res.json();
+                    setHistoricalMessages(msgs);
+                  } catch (e) {
+                    setHistoryError(String(e));
+                  } finally {
+                    setFetchingHistory(false);
+                  }
+                }}
               >
-                {showHistory ? 'Geçmişi Gizle' : '📜 Bu Oturumdaki Mesajları Gör'}
+                {showHistory ? 'Geçmişi Gizle' : '📜 Tüm Mesaj Geçmişini Gör (Bot)'}
               </button>
 
               {showHistory && (
                 <div style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflowY: 'auto', maxHeight: '200px', border: '1px solid var(--border)', background: 'var(--bg-base)', padding: '8px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {userMessages.length === 0 ? (
+                  {fetchingHistory ? (
+                    <div style={{ textAlign: 'center', padding: '10px' }}><span className="spinner" style={{ width: 16, height: 16, display: 'inline-block', verticalAlign: 'middle' }}/> Bot'tan Getiriliyor...</div>
+                  ) : historyError ? (
+                    <div style={{ color: 'var(--mod-timeout)', padding: '10px' }}>Bot bağlantı hatası.<br/><span style={{opacity:0.5}}>{historyError}</span><br/><br/><span style={{fontSize: '10px', color: 'var(--text-muted)'}}>Bot henüz açık değilse sadece anlık oturum kayıtlarını görebilirsiniz.</span></div>
+                  ) : historicalMessages && historicalMessages.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '10px' }}>
-                      Bu oturumda henüz mesajı yok.
+                      Botun veritabanında henüz bu kullanıcıya ait mesaj yok.
                     </div>
                   ) : (
-                    userMessages.map(m => (
-                      <div key={m.id} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word' }}>
-                        <span style={{ color: 'var(--text-muted)', fontSize: '10px', marginRight: '6px' }}>
-                          {new Date(m.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>
-                          {m.content}
-                        </span>
-                      </div>
-                    ))
+                    historicalMessages?.map((m, i) => {
+                      const timeStr = new Date(m.created_at || m.timestamp || Date.now()).toLocaleString('tr-TR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                      const content = m.content || '';
+                      return (
+                        <div key={m.id || i} style={{ opacity: m.deleted ? 0.5 : 1, wordBreak: 'break-word', paddingBottom: '4px', borderBottom: '1px solid var(--border-dim)' }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{timeStr}</span>
+                          </div>
+                          <div style={{ color: 'var(--text-primary)', textDecoration: m.deleted ? 'line-through' : 'none' }}>{content}</div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               )}
