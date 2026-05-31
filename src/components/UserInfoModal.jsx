@@ -4,7 +4,6 @@ import { useChatStore } from '../store/chatStore';
 
 export default function UserInfoModal({ username, color, onClose, onBan, onTimeout }) {
   const [userInfo, setUserInfo] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
 
