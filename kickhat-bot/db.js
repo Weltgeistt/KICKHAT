@@ -16,6 +16,53 @@ async function initDB() {
                 deleted INTEGER DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_channel_user ON messages(channel_slug, username);
+
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                kick_username TEXT UNIQUE NOT NULL,
+                role TEXT DEFAULT 'user', -- 'user', 'admin', 'founder'
+                language TEXT DEFAULT 'tr', -- 'tr', 'en', 'de', 'es'
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                plan_type TEXT DEFAULT 'free',
+                expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS bot_settings (
+                channel_slug TEXT PRIMARY KEY,
+                ai_moderation_enabled BOOLEAN DEFAULT true,
+                strictness_level INTEGER DEFAULT 2, -- 1: Relaxed, 2: Normal, 3: Strict
+                app_language TEXT DEFAULT 'tr',
+                games_enabled BOOLEAN DEFAULT true
+            );
+
+            CREATE TABLE IF NOT EXISTS user_xp (
+                id SERIAL PRIMARY KEY,
+                channel_slug TEXT NOT NULL,
+                kick_username TEXT NOT NULL,
+                xp_points INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 1,
+                UNIQUE(channel_slug, kick_username)
+            );
+
+            CREATE TABLE IF NOT EXISTS feature_flags (
+                feature_name TEXT PRIMARY KEY,
+                is_enabled BOOLEAN DEFAULT true
+            );
+
+            CREATE TABLE IF NOT EXISTS moderation_logs (
+                id SERIAL PRIMARY KEY,
+                channel_slug TEXT NOT NULL,
+                kick_username TEXT NOT NULL,
+                action TEXT NOT NULL, -- 'warning', 'timeout', 'ban'
+                reason TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
         console.log("✅ Veritabanı (PostgreSQL) hazır.");
     } catch (e) {
@@ -55,4 +102,68 @@ async function getUserMessages(channel_slug, username) {
     }
 }
 
-module.exports = { initDB, saveMessage, markMessageDeleted, getUserMessages };
+// --- Yeni Moderasyon Fonksiyonları ---
+
+async function logModerationAction(channel_slug, kick_username, action, reason) {
+    try {
+        await pool.query(
+            `INSERT INTO moderation_logs (channel_slug, kick_username, action, reason) VALUES ($1, $2, $3, $4)`,
+            [channel_slug, kick_username, action, reason]
+        );
+    } catch (e) {
+        console.error("❌ Moderasyon logu kaydedilemedi:", e.message);
+    }
+}
+
+async function getUserStrikes(channel_slug, kick_username) {
+    try {
+        // Warning ve Timeout eylemlerini "strike" olarak sayıyoruz
+        const res = await pool.query(
+            `SELECT COUNT(*) as count FROM moderation_logs WHERE channel_slug = $1 AND kick_username = $2 AND action IN ('warning', 'timeout')`,
+            [channel_slug, kick_username]
+        );
+        return parseInt(res.rows[0].count) || 0;
+    } catch (e) {
+        console.error("❌ Strike sayısı çekilemedi:", e.message);
+        return 0;
+    }
+}
+
+async function getChatStatistics(channel_slug, period = 'all') {
+    try {
+        let dateCondition = '';
+        if (period === 'day') {
+            dateCondition = `AND created_at >= NOW() - INTERVAL '1 day'`;
+        } else if (period === 'week') {
+            dateCondition = `AND created_at >= NOW() - INTERVAL '1 week'`;
+        } else if (period === 'month') {
+            dateCondition = `AND created_at >= NOW() - INTERVAL '1 month'`;
+        } else if (period === 'year') {
+            dateCondition = `AND created_at >= NOW() - INTERVAL '1 year'`;
+        }
+
+        const query = `
+            SELECT username, COUNT(*) as count 
+            FROM messages 
+            WHERE channel_slug = $1 ${dateCondition}
+            GROUP BY username 
+            ORDER BY count DESC 
+            LIMIT 100
+        `;
+        const res = await pool.query(query, [channel_slug]);
+        return res.rows;
+    } catch (e) {
+        console.error("❌ İstatistikler çekilemedi:", e.message);
+        return [];
+    }
+}
+
+module.exports = { 
+    initDB, 
+    saveMessage, 
+    markMessageDeleted, 
+    getUserMessages,
+    logModerationAction,
+    getUserStrikes,
+    getChatStatistics
+};

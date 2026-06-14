@@ -2,12 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pusher } = require('pusher-js');
-const { initDB, saveMessage, markMessageDeleted, getUserMessages } = require('./db');
+const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics } = require('./db');
+const path = require('path');
 // Add standard node fetch if node version is < 18, but Node 20 has global fetch.
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || 'kickhat-secret-key-123';
@@ -112,6 +114,14 @@ async function start() {
         const { channel_slug, username } = req.params;
         const messages = await getUserMessages(channel_slug, username);
         res.json(messages);
+    });
+
+    // Top Chatters istatistiklerini getiren endpoint
+    app.get('/api/stats/:channel_slug', async (req, res) => {
+        const { channel_slug } = req.params;
+        const period = req.query.period || 'all';
+        const stats = await getChatStatistics(channel_slug, period);
+        res.json(stats);
     });
 
     app.listen(PORT, () => {
