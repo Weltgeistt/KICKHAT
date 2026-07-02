@@ -1,9 +1,12 @@
 import { cookies } from "next/headers";
 import { readSession, isAdmin } from "@/lib/session";
-import { botFetch } from "@/lib/botApi";
 
 export async function GET() {
   const session = await readSession(await cookies());
-  if (!isAdmin(session)) return Response.json({ error: "Yetkisiz" }, { status: 403 });
-  return botFetch("/api/admin/overview");
+  if (!session) return Response.json({ username: null });
+  return Response.json({
+    username: session.username,
+    role: session.role,
+    isAdmin: isAdmin(session),
+  });
 }
