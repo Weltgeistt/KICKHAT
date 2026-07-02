@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pusher } = require('pusher-js');
-const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats } = require('./db');
+const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats, getAdminOverview, getFeatureFlags, setFeatureFlag } = require('./db');
+const { handleChatCommand } = require('./commands');
+const { addXP } = require('./games_and_xp');
+const { sendMessage } = require('./kick_api');
 const path = require('path');
 // Add standard node fetch if node version is < 18, but Node 20 has global fetch.
 
@@ -21,8 +24,38 @@ try {
     console.log("⚠️ vip.json bulunamadı. VIP kanallar otomatik dinlenmeyecek.");
 }
 
-// Pusher instances keyed by chatroomId
+// Pusher instances keyed by chatroomId → { pusher, channelSlug }
 const activeConnections = {};
+
+// Global feature flag'leri 30 sn'lik cache ile okur (her mesajda DB'ye gitmemek için)
+let flagCache = { data: {}, fetchedAt: 0 };
+async function getCachedFlags() {
+    if (Date.now() - flagCache.fetchedAt > 30000) {
+        flagCache = { data: await getFeatureFlags(), fetchedAt: Date.now() };
+    }
+    return flagCache.data;
+}
+
+// Gelen her chat mesajını işler: komutlar + XP + Level Up bildirimi
+async function processMessage(channelSlug, chatroomId, username, content) {
+    try {
+        const flags = await getCachedFlags();
+
+        // Komutlar ("!" ile başlayanlar) — işlendiyse XP verme
+        const wasCommand = await handleChatCommand({ channelSlug, chatroomId, sender: username, content });
+        if (wasCommand) return;
+
+        // XP sistemi (global chat_games flag'i kapalıysa çalışmaz)
+        if (flags.chat_games !== false) {
+            const xp = await addXP(channelSlug, username);
+            if (xp?.leveledUp) {
+                await sendMessage(channelSlug, chatroomId, `🎉 @${username} seviye atladı! Yeni seviye: ${xp.newLevel} ⚡`);
+            }
+        }
+    } catch (e) {
+        console.error("❌ Mesaj işleme hatası:", e.message);
+    }
+}
 
 function connectToChannel(channelSlug, chatroomId) {
     if (activeConnections[chatroomId]) {
@@ -54,6 +87,7 @@ function connectToChannel(channelSlug, chatroomId) {
             };
             if (dbMsg.username && dbMsg.content) {
                 saveMessage(dbMsg);
+                processMessage(channelSlug, chatroomId, dbMsg.username, dbMsg.content);
             }
         } catch (e) {
             console.error("Message parse error:", e);
@@ -66,7 +100,7 @@ function connectToChannel(channelSlug, chatroomId) {
         }
     });
 
-    activeConnections[chatroomId] = pusher;
+    activeConnections[chatroomId] = { pusher, channelSlug };
     console.log(`✅ Bot bağlandı: ${channelSlug} (Room: ${chatroomId})`);
     return true;
 }
@@ -176,6 +210,35 @@ async function start() {
         const { channel_slug, username } = req.params;
         const messages = await getUserMessages(channel_slug, username);
         res.json(messages);
+    });
+
+    // 🛠️ Admin Paneli Endpoint'leri (API key korumalı — website sunucu tarafından çağrılır)
+    // Global özet: bağlı kanallar, 24 saatlik metrikler, son moderasyon logları
+    app.get('/api/admin/overview', async (req, res) => {
+        const overview = await getAdminOverview();
+        if (!overview) return res.status(500).json({ error: 'Admin özeti alınamadı' });
+
+        // Canlı bağlantı bilgisi DB'den değil bellekten gelir
+        overview.connected_channels = Object.values(activeConnections).map(c => c.channelSlug);
+        overview.connected_count = overview.connected_channels.length;
+        res.json(overview);
+    });
+
+    // Global feature flag'leri oku
+    app.get('/api/admin/flags', async (req, res) => {
+        const flags = await getFeatureFlags();
+        res.json(flags);
+    });
+
+    // Global feature flag güncelle (örn: ai_moderation, chat_games)
+    app.post('/api/admin/flags', async (req, res) => {
+        const { feature_name, is_enabled } = req.body;
+        if (!feature_name || typeof is_enabled !== 'boolean') {
+            return res.status(400).json({ error: 'feature_name (string) ve is_enabled (boolean) gerekli' });
+        }
+        const ok = await setFeatureFlag(feature_name, is_enabled);
+        if (!ok) return res.status(500).json({ error: 'Flag güncellenemedi' });
+        res.json({ feature_name, is_enabled });
     });
 
 

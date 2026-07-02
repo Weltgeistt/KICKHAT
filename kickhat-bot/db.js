@@ -284,15 +284,81 @@ async function getDashboardStats(channel_slug) {
     }
 }
 
-module.exports = { 
-    initDB, 
-    saveMessage, 
-    markMessageDeleted, 
+// --- Global Admin Fonksiyonları (website yönetim paneli için) ---
+
+async function getAdminOverview() {
+    try {
+        const [
+            msgs24h,
+            users24h,
+            modActions24h,
+            totalChannels,
+            recentLogs
+        ] = await Promise.all([
+            // Son 24 saatteki toplam mesaj (tüm kanallar)
+            pool.query(`SELECT COUNT(*) as count FROM messages WHERE created_at >= NOW() - INTERVAL '24 hours'`),
+            // Son 24 saatte yazan farklı kullanıcı sayısı
+            pool.query(`SELECT COUNT(DISTINCT username) as count FROM messages WHERE created_at >= NOW() - INTERVAL '24 hours'`),
+            // Son 24 saatteki moderasyon aksiyonları
+            pool.query(`SELECT COUNT(*) as count FROM moderation_logs WHERE created_at >= NOW() - INTERVAL '24 hours'`),
+            // Veritabanında mesajı olan toplam kanal sayısı
+            pool.query(`SELECT COUNT(DISTINCT channel_slug) as count FROM messages`),
+            // Tüm kanallardan son 10 moderasyon aksiyonu
+            pool.query(`SELECT channel_slug, kick_username, action, reason, created_at FROM moderation_logs ORDER BY created_at DESC LIMIT 10`)
+        ]);
+
+        return {
+            messages_24h:    parseInt(msgs24h.rows[0].count),
+            active_users_24h: parseInt(users24h.rows[0].count),
+            mod_actions_24h: parseInt(modActions24h.rows[0].count),
+            total_channels:  parseInt(totalChannels.rows[0].count),
+            recent_logs:     recentLogs.rows,
+        };
+    } catch (e) {
+        console.error("❌ Admin özeti çekilemedi:", e.message);
+        return null;
+    }
+}
+
+async function getFeatureFlags() {
+    try {
+        const res = await pool.query(`SELECT feature_name, is_enabled FROM feature_flags`);
+        const flags = {};
+        res.rows.forEach(r => { flags[r.feature_name] = r.is_enabled; });
+        return flags;
+    } catch (e) {
+        console.error("❌ Feature flag'ler çekilemedi:", e.message);
+        return {};
+    }
+}
+
+async function setFeatureFlag(featureName, isEnabled) {
+    try {
+        await pool.query(
+            `INSERT INTO feature_flags (feature_name, is_enabled) VALUES ($1, $2)
+             ON CONFLICT (feature_name) DO UPDATE SET is_enabled = $2`,
+            [featureName, isEnabled]
+        );
+        return true;
+    } catch (e) {
+        console.error("❌ Feature flag güncellenemedi:", e.message);
+        return false;
+    }
+}
+
+module.exports = {
+    pool,
+    initDB,
+    saveMessage,
+    markMessageDeleted,
     getUserMessages,
     logModerationAction,
     getUserStrikes,
     getChatStatistics,
     getModerationLogs,
     getModerationSummary,
-    getDashboardStats
+    getDashboardStats,
+    getAdminOverview,
+    getFeatureFlags,
+    setFeatureFlag
 };
