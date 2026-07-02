@@ -320,6 +320,9 @@ function ReplyContextView({ currentMessage }) {
 export default function ChatMessage({ message }) {
   const { chatroomId, deleteMessageById, addToast, canModerate, subscriberBadges, toggleFeatured, featuredMessages } = useChatStore();
   const isFeatured = featuredMessages.some((m) => m.id === message.id);
+  const userXpDataRaw = useChatStore((s) => s.userXp && s.userXp[message?.username]);
+  const userXpData = userXpDataRaw || { xp: 0, level: 1 };
+  
   const [timeoutModal, setTimeoutModal] = useState(false);
   const [infoModal, setInfoModal] = useState(false);
   const [showContext, setShowContext] = useState(false);
@@ -468,6 +471,30 @@ export default function ChatMessage({ message }) {
                 ))}
               </span>
             )}
+            
+            {/* Level Badge (Gamification) */}
+            {useChatStore.getState().settings.games_active && message.username && (
+              <span 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'var(--border)', 
+                  color: 'var(--kick-green)', 
+                  fontSize: '9px', 
+                  fontWeight: 'bold',
+                  padding: '0 4px', 
+                  borderRadius: '4px',
+                  height: '14px',
+                  marginLeft: '2px',
+                  border: '1px solid var(--border-dim)'
+                }}
+                title={`Level ${userXpData.level} (${userXpData.xp} XP)`}
+              >
+                Lvl.{userXpData.level}
+              </span>
+            )}
+
             {/* Username */}
             <span
               className="msg-username"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../store/chatStore';
 
 // Kutu başlıkları için ikonlar
@@ -321,6 +322,7 @@ function ListRenderer({ items, emptyText }) {
 }
 
 export default function AiAnalysisTab() {
+  const { t } = useTranslation();
   const { aiAnalyses, isAnalyzing, runAiAnalysis, generateDetailedAnalysis, settings } = useChatStore();
   const [customSearch, setCustomSearch] = React.useState('');
   const [timeframe, setTimeframe] = React.useState('');
@@ -338,9 +340,9 @@ export default function AiAnalysisTab() {
     <div className="chat-panel" style={{ padding: '16px', overflowY: 'auto', background: 'var(--bg-panel)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--kick-green)', margin: '0 0 4px 0' }}>Akıllı Chat Asistanı</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--kick-green)', margin: '0 0 4px 0' }}>{t('ai_tab.title') || "Akıllı Chat Asistanı"}</h2>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Otomatik güncelleme: {settings.aiAnalysisInterval} dakikada bir.
+            {t('ai_tab.update_interval', { interval: settings.aiAnalysisInterval }) || `Otomatik güncelleme: ${settings.aiAnalysisInterval} dakikada bir.`}
           </div>
         </div>
         <button 
@@ -350,14 +352,14 @@ export default function AiAnalysisTab() {
           style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           {isAnalyzing && <span className="spinner" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></span>}
-          {isAnalyzing ? 'Analiz ediliyor...' : 'Şimdi Yenile'}
+          {isAnalyzing ? '...' : (t('ai_tab.btn_refresh') || 'Şimdi Yenile')}
         </button>
       </div>
 
       <form onSubmit={handleCustomSearch} style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
         <input 
           type="text" 
-          placeholder="Özel analiz iste (örn: Valorant güncellemesi, derbi maçı...)" 
+          placeholder={t('ai_tab.placeholder') || "Özel analiz iste (örn: Valorant güncellemesi, derbi maçı...)"} 
           value={customSearch}
           onChange={(e) => setCustomSearch(e.target.value)}
           className="form-input"
@@ -369,10 +371,10 @@ export default function AiAnalysisTab() {
           className="form-input"
           style={{ width: '130px', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-card)' }}
         >
-          <option value="">Her Zaman</option>
-          <option value="1d">Son 24 Saat</option>
-          <option value="3d">Son 3 Gün</option>
-          <option value="7d">Son 1 Hafta</option>
+          <option value="">{t('ai_tab.always') || "Her Zaman"}</option>
+          <option value="1d">{t('ai_tab.last_24h') || "Son 24 Saat"}</option>
+          <option value="3d">{t('ai_tab.last_3d') || "Son 3 Gün"}</option>
+          <option value="7d">{t('ai_tab.last_7d') || "Son 1 Hafta"}</option>
         </select>
         <button 
           type="submit" 
@@ -380,14 +382,14 @@ export default function AiAnalysisTab() {
           className="btn"
           style={{ padding: '8px 16px', background: 'var(--border)', color: 'var(--text-primary)', border: '1px solid var(--border-hover)' }}
         >
-          Analiz Et
+          {t('ai_tab.btn_analyze') || "Analiz Et"}
         </button>
       </form>
 
       {aiAnalyses.length === 0 && !isAnalyzing && (
         <div className="empty-state" style={{ padding: '40px 0', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}>
-          <div className="empty-state-title" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Bekleniyor...</div>
-          <div className="empty-state-desc" style={{ marginTop: '8px' }}>Chat verileri toplandıktan sonra "Şimdi Yenile" butonuna basarak veya bir konu aratarak analizi başlatabilirsiniz.</div>
+          <div className="empty-state-title" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{t('ai_tab.waiting') || "Bekleniyor..."}</div>
+          <div className="empty-state-desc" style={{ marginTop: '8px' }}>{t('ai_tab.waiting_desc') || "Chat verileri toplandıktan sonra \"Şimdi Yenile\" butonuna basarak veya bir konu aratarak analizi başlatabilirsiniz."}</div>
         </div>
       )}
 
@@ -400,47 +402,37 @@ export default function AiAnalysisTab() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
             
-            <DashboardCard title="Gözden Kaçan Sorular" icon={<Icons.Question />} color="#ffb454">
-              <ListRenderer items={latestAnalysis.questions} emptyText="Şu an için belirgin bir soru tespit edilmedi." />
+            <DashboardCard title={t('ai_tab.missed_questions') || "Gözden Kaçan Sorular"} icon={<Icons.Question />} color="#ffb454">
+              <ListRenderer items={latestAnalysis.questions} emptyText={t('ai_tab.no_questions') || "Şu an için belirgin bir soru tespit edilmedi."} />
             </DashboardCard>
 
-            <DashboardCard title="Gündem / Konu Başlıkları" icon={<Icons.Topic />} color="#6ea1ff">
-              <ListRenderer items={latestAnalysis.topics} emptyText="Chat şu an sakin, belirgin bir gündem yok." />
+            <DashboardCard title={t('ai_tab.agenda_topics') || "Gündem / Konu Başlıkları"} icon={<Icons.Topic />} color="#6ea1ff">
+              <ListRenderer items={latestAnalysis.topics} emptyText={t('ai_tab.no_agenda') || "Chat şu an sakin, belirgin bir gündem yok."} />
             </DashboardCard>
 
-            <DashboardCard title="Teknik Durum" icon={<Icons.Warning />} color="#ff6b6b">
-              <ListRenderer items={latestAnalysis.technicalIssues} emptyText="Yayında donma veya kasma şikayeti bulunmuyor." />
+            <DashboardCard title={t('ai_tab.technical_status') || "Teknik Durum"} icon={<Icons.Warning />} color="#ff6b6b">
+              <ListRenderer items={latestAnalysis.technicalIssues} emptyText={t('ai_tab.no_technical_issues') || "Yayında donma veya kasma şikayeti bulunmuyor."} />
             </DashboardCard>
 
           </div>
 
           <div style={{ width: '100%' }}>
-            <DashboardCard title="Kick Trendleri & Tavsiyeler" icon={<Icons.Trending />} color="var(--kick-green)">
+            <DashboardCard title={t('ai_tab.kick_trends') || "Kick Trendleri & Tavsiyeler"} icon={<Icons.Trending />} color="var(--kick-green)">
               {latestAnalysis.news_summary ? (
                 <div style={{ marginBottom: '16px', background: 'var(--bg-hover)', padding: '10px', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>📡 Anlık İnternet Gündemi (Kısa)</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>{t('ai_tab.live_internet_agenda') || "📡 Anlık İnternet Gündemi (Kısa)"}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                     {latestAnalysis.news_summary}
                   </div>
                 </div>
-              ) : latestAnalysis.newsData ? (
+              ) : (
                 <div style={{ marginBottom: '16px', background: 'var(--bg-hover)', padding: '10px', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>📡 Anlık İnternet Gündemi (Kısa)</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {latestAnalysis.newsData.split('\n').filter(l => l.trim().length > 5).slice(0, 3).map((item, idx) => {
-                      const parts = item.split(':::');
-                      const title = parts[0] ? parts[0].replace(/\(http.*\)/g, '').trim() : '';
-                      const desc = parts[1] ? parts[1].replace(/<[^>]*>?/gm, '').trim() : '';
-                      return (
-                        <div key={idx} style={{ background: 'var(--bg-card)', padding: '8px', borderRadius: '4px', borderLeft: '2px solid var(--kick-green)' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}>{title.substring(0, 80)}{title.length > 80 ? '...' : ''}</div>
-                          {desc && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{desc.substring(0, 120)}{desc.length > 120 ? '...' : ''}</div>}
-                        </div>
-                      );
-                    })}
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>{t('ai_tab.live_internet_agenda') || "📡 Anlık İnternet Gündemi (Kısa)"}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    {t('ai_tab.no_summary_found') || "Özet bulunamadı."}
                   </div>
                 </div>
-              ) : null}
+              )}
 
               <div style={{ textAlign: 'center', padding: '10px 0', borderTop: '1px solid var(--border)', marginTop: '10px' }}>
                 <button 
@@ -449,7 +441,7 @@ export default function AiAnalysisTab() {
                   style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                  Haberleri İncele & Taktik Al
+                  {t('ai_tab.review_news_btn') || "Haberleri İncele & Taktik Al"}
                 </button>
               </div>
               
@@ -466,13 +458,13 @@ export default function AiAnalysisTab() {
           
           {aiAnalyses.length > 1 && (
             <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '10px' }}>GEÇMİŞ ÖZETLER (Son 5)</div>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '10px' }}>{t('ai_tab.past_summaries') || "GEÇMİŞ ÖZETLER (Son 5)"}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {aiAnalyses.slice(1, 6).map(a => (
                   <div key={a.id} style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-hover)', padding: '8px 12px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between' }}>
                     <span>{new Date(a.timestamp).toLocaleTimeString()}</span>
                     <span style={{ fontStyle: 'italic', opacity: 0.8 }}>
-                      {a.topics && a.topics[0] ? a.topics[0] : 'Özet bulunamadı'}
+                      {a.topics && a.topics[0] ? a.topics[0] : (t('ai_tab.no_summary_found') || "Özet bulunamadı")}
                     </span>
                   </div>
                 ))}

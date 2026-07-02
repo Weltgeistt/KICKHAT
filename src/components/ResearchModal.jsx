@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../store/chatStore';
 
 export default function ResearchModal({ isOpen, onClose }) {
+  const { t } = useTranslation();
   const { customResearchChats, startCustomResearch, sendCustomResearchMessage } = useChatStore();
   const [topicInput, setTopicInput] = useState('');
   const [currentQuery, setCurrentQuery] = useState(null);
@@ -78,16 +80,16 @@ export default function ResearchModal({ isOpen, onClose }) {
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
             </div>
-            <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Ne Araştırmak İstiyorsunuz?</h2>
+            <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>{t('research.title') || "Ne Araştırmak İstiyorsunuz?"}</h2>
             <p style={{ color: 'var(--text-secondary)', textAlign: 'center', maxWidth: '400px', fontSize: '13px' }}>
-              İnternette taze haberleri tarar ve doğrudan size özel bir yayın taktiği sunar.
+              {t('research.desc') || "İnternette taze haberleri tarar ve doğrudan size özel bir yayın taktiği sunar."}
             </p>
             <form onSubmit={handleSearch} style={{ width: '100%', maxWidth: '500px', display: 'flex', gap: '10px', marginTop: '10px' }}>
               <input
                 type="text"
                 value={topicInput}
                 onChange={e => setTopicInput(e.target.value)}
-                placeholder="Örn: GTA 6 ne zaman çıkacak?"
+                placeholder={t('research.placeholder') || "Örn: GTA 6 ne zaman çıkacak?"}
                 autoFocus
                 style={{
                   flex: 1, padding: '14px', borderRadius: '8px', border: '1px solid var(--kick-green)',
@@ -97,7 +99,7 @@ export default function ResearchModal({ isOpen, onClose }) {
               <button type="submit" style={{
                 background: 'var(--kick-green)', color: '#000', border: 'none',
                 padding: '0 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px'
-              }}>Araştır</button>
+              }}>{t('research.btn') || "Araştır"}</button>
             </form>
           </div>
         ) : (
@@ -108,11 +110,11 @@ export default function ResearchModal({ isOpen, onClose }) {
                 padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px'
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                Geri
+                {t('research.back') || "Geri"}
               </button>
               <div style={{ flex: 1, paddingRight: '20px' }}>
                 <h3 style={{ color: 'var(--kick-green)', margin: '0 0 4px 0', fontSize: '16px' }}>{currentQuery}</h3>
-                <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>İnternet bağlantılı serbest araştırma asistanı.</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{t('research.subtitle') || "İnternet bağlantılı serbest araştırma asistanı."}</div>
               </div>
             </div>
 
@@ -120,7 +122,7 @@ export default function ResearchModal({ isOpen, onClose }) {
               {currentChat?.isGenerating && (!currentChat.chatHistory || currentChat.chatHistory.length === 0) ? (
                 <div style={{ textAlign: 'center', margin: 'auto', color: 'var(--kick-green)' }}>
                   <div style={{ width: '30px', height: '30px', border: '2px solid rgba(83, 252, 24, 0.2)', borderTopColor: 'var(--kick-green)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
-                  <div style={{ fontSize: '13px' }}>İnternet taranıyor ve strateji üretiliyor...</div>
+                  <div style={{ fontSize: '13px' }}>{t('research.generating') || "İnternet taranıyor ve strateji üretiliyor..."}</div>
                 </div>
               ) : (
                 currentChat?.chatHistory?.map((msg, i) => (
@@ -135,13 +137,13 @@ export default function ResearchModal({ isOpen, onClose }) {
                     lineHeight: '1.5',
                     whiteSpace: 'pre-wrap'
                   }}>
-                    {msg.role === 'assistant' && i === 0 && <div style={{ fontSize: '11px', color: 'var(--kick-green)', marginBottom: '6px', fontWeight: 'bold' }}>⚡ ARAŞTIRMA SONUCU</div>}
+                    {msg.role === 'assistant' && i === 0 && <div style={{ fontSize: '11px', color: 'var(--kick-green)', marginBottom: '6px', fontWeight: 'bold' }}>{t('research.result_title') || "⚡ ARAŞTIRMA SONUCU"}</div>}
                     {msg.content}
                   </div>
                 ))
               )}
               {currentChat?.isGenerating && currentChat?.chatHistory?.length > 0 && (
-                <div style={{ alignSelf: 'flex-start', color: 'var(--text-muted)', fontSize: '12px', padding: '10px' }}>Araştırılıyor...</div>
+                <div style={{ alignSelf: 'flex-start', color: 'var(--text-muted)', fontSize: '12px', padding: '10px' }}>{t('research.searching') || "Araştırılıyor..."}</div>
               )}
               <div ref={chatEndRef} />
             </div>
@@ -151,7 +153,7 @@ export default function ResearchModal({ isOpen, onClose }) {
                 type="text" 
                 value={chatInput} 
                 onChange={e => setChatInput(e.target.value)}
-                placeholder="Bu konu hakkında daha derin bir soru sor..."
+                placeholder={t('research.ask_placeholder') || "Bu konu hakkında daha derin bir soru sor..."}
                 disabled={currentChat?.isGenerating}
                 style={{
                   flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', 
@@ -166,7 +168,7 @@ export default function ResearchModal({ isOpen, onClose }) {
                   padding: '0 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'
                 }}
               >
-                Sor
+                {t('research.ask_btn') || "Sor"}
               </button>
             </form>
           </div>

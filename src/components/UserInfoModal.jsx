@@ -12,6 +12,9 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
 
   const channelSlug = useChatStore((s) => s.channelSlug);
   const messages = useChatStore((s) => s.messages);
+  const userXpDataRaw = useChatStore((s) => s.userXp && s.userXp[username]);
+  const userXpData = userXpDataRaw || { xp: 0, level: 1 };
+  const gamesActive = useChatStore((s) => s.settings.games_active);
 
   useEffect(() => {
     invoke('get_user_info', { username })
@@ -71,6 +74,26 @@ export default function UserInfoModal({ username, color, onClose, onBan, onTimeo
                 </div>
               </div>
             </div>
+
+            {/* XP and Level Progress Bar (Gamification) */}
+            {gamesActive && (
+              <div style={{ marginBottom: '14px', background: 'var(--bg-input)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-dim)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '6px', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--kick-green)' }}>Seviye {userXpData.level}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{userXpData.xp} / {userXpData.level * 100} XP</span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--bg-base)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div 
+                    style={{ 
+                      height: '100%', 
+                      width: `${Math.min(100, (userXpData.xp / (userXpData.level * 100)) * 100)}%`, 
+                      background: 'var(--kick-green)',
+                      transition: 'width 0.3s ease'
+                    }} 
+                  />
+                </div>
+              </div>
+            )}
 
             {bio && (
               <div style={{

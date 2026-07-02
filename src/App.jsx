@@ -8,8 +8,10 @@ import AiAnalysisTab from './components/AiAnalysisTab';
 import ToastContainer from './components/ToastContainer';
 import SettingsModal from './components/SettingsModal';
 import ResearchModal from './components/ResearchModal';
+import { useTranslation } from 'react-i18next';
 
 export default function App() {
+  const { t } = useTranslation();
   const { channelInfo, disconnectPusher, settings, runAiAnalysis, setAuthToken } = useChatStore();
   const [view, setView] = useState('connect'); // 'connect' | 'chat' | 'analysis'
   const [showSettings, setShowSettings] = useState(false);
@@ -81,7 +83,7 @@ export default function App() {
     <div className="app-container">
       {/* Custom Title Bar */}
       <TitleBar
-        subtitle={view === 'chat' ? channelName : null}
+        subtitle={view === 'chat' ? channelName : t('app.disconnected')}
         onOpenSettings={() => setShowSettings(true)}
         onOpenResearch={() => setShowResearch(true)}
       />

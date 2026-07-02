@@ -3,8 +3,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useChatStore } from '../store/chatStore';
 import OllamaManualModal from './OllamaManualModal';
+import { useTranslation } from 'react-i18next';
 
 export default function ConnectModal({ onConnected }) {
+  const { t } = useTranslation();
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -94,7 +96,7 @@ export default function ConnectModal({ onConnected }) {
             <span className="terminal-dot yellow" />
             <span className="terminal-dot green" />
           </span>
-          <span className="terminal-title">kickhat — kick chat moderation cli</span>
+          <span className="terminal-title">{t('connect.cli_title')}</span>
         </div>
 
         {/* Gövde */}
@@ -102,14 +104,14 @@ export default function ConnectModal({ onConnected }) {
           {!showManual ? (
             <form onSubmit={handleConnect} style={{ display: 'contents' }}>
               <div className="terminal-line green">KICKHAT v0.1.0</div>
-              <div className="terminal-line dim"># yayıncı adını yaz ve Enter'a bas, chat'e bağlan</div>
+              <div className="terminal-line dim">{t('connect.instruction')}</div>
 
               {/* Durum satırı */}
               <div className="terminal-line">
                 <span className="dim">token: </span>
                 {authToken
-                  ? <span className="green">● tanımlı (moderasyon aktif)</span>
-                  : <span className="dim">○ tanımsız (sadece izleme)</span>}
+                  ? <span className="green">{t('connect.token_defined')}</span>
+                  : <span className="dim">{t('connect.token_undefined')}</span>}
               </div>
 
               <div className="terminal-spacer" />
@@ -121,7 +123,7 @@ export default function ConnectModal({ onConnected }) {
                   id="channel-slug-input"
                   className="terminal-input"
                   type="text"
-                  placeholder="connect <yayıncı>"
+                  placeholder={t('connect.prompt_placeholder')}
                   value={slug}
                   onChange={(e) => { setSlug(e.target.value); setError(''); }}
                   autoFocus
@@ -138,11 +140,11 @@ export default function ConnectModal({ onConnected }) {
                 type="submit"
                 disabled={loading || !slug.trim()}
               >
-                {loading ? '… bağlanıyor' : 'connect ↵'}
+                {loading ? t('connect.connecting') : t('connect.btn_connect')}
               </button>
 
               <div className="terminal-spacer" />
-              <div className="terminal-line dim"># diğer komutlar</div>
+              <div className="terminal-line dim">{t('connect.other_commands')}</div>
               <div className="terminal-actions">
                 <button
                   id="manual-id-toggle"
@@ -157,9 +159,9 @@ export default function ConnectModal({ onConnected }) {
 
               <div className="terminal-spacer" />
               <div style={{ border: '1px dashed var(--border-dim)', padding: '8px', borderRadius: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div className="terminal-line" style={{ color: 'var(--kick-green)', fontWeight: 'bold' }}># Yapay Zeka (AI) Desteği</div>
+                <div className="terminal-line" style={{ color: 'var(--kick-green)', fontWeight: 'bold' }}>{t('connect.ai_support')}</div>
                 <div className="terminal-line dim" style={{ fontSize: '11px', lineHeight: '1.4' }}>
-                  Yayın analizi sekmeleri için yerel bir model (Ollama) veya harici bir API kullanabilirsiniz. Bu özellikler tamamen opsiyoneldir ve ayarlardan kapatılabilir.
+                  {t('connect.ai_desc')}
                 </div>
                 
                 {isDownloadingOllama ? (
@@ -177,7 +179,7 @@ export default function ConnectModal({ onConnected }) {
                       onClick={startOllamaDownload}
                       style={{ padding: '2px 8px', fontSize: '11px', flex: 1 }}
                     >
-                      Otomatik İndir ve Kur
+                      {t('connect.download_auto')}
                     </button>
                     <button 
                       className="terminal-btn ghost" 
@@ -185,7 +187,7 @@ export default function ConnectModal({ onConnected }) {
                       onClick={() => setShowOllamaManual(true)}
                       style={{ padding: '2px 8px', fontSize: '11px', flex: 1 }}
                     >
-                      Manuel Kurulum
+                      {t('connect.download_manual')}
                     </button>
                   </div>
                 )}
@@ -195,7 +197,7 @@ export default function ConnectModal({ onConnected }) {
           ) : (
             <form onSubmit={handleManualConnect} style={{ display: 'contents' }}>
               <div className="terminal-line green">kickhat --manual-id</div>
-              <div className="terminal-line dim"># Chatroom ID nasıl bulunur:</div>
+              <div className="terminal-line dim">{t('connect.find_id_desc')}</div>
               <div className="terminal-line dim">
                 {`kick.com/${manualName || 'kanal'} → F12 → Network → api/v2/channels → chatroom.id`}
               </div>
@@ -208,7 +210,7 @@ export default function ConnectModal({ onConnected }) {
                   id="channel-name-input"
                   className="terminal-input"
                   type="text"
-                  placeholder="yayıncı adı (görüntüleme)"
+                  placeholder={t('connect.manual_name_placeholder')}
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                 />
@@ -220,7 +222,7 @@ export default function ConnectModal({ onConnected }) {
                   id="chatroom-id-input"
                   className="terminal-input"
                   type="number"
-                  placeholder="chatroom id (örn: 1234567)"
+                  placeholder={t('connect.manual_id_placeholder')}
                   value={manualId}
                   onChange={(e) => { setManualId(e.target.value); setError(''); }}
                   autoFocus
@@ -235,7 +237,7 @@ export default function ConnectModal({ onConnected }) {
                   type="button"
                   onClick={() => { setShowManual(false); setError(''); }}
                 >
-                  ← geri
+                  {t('connect.btn_back')}
                 </button>
                 <button
                   id="manual-connect-btn"
@@ -244,7 +246,7 @@ export default function ConnectModal({ onConnected }) {
                   disabled={!manualId.trim()}
                   style={{ flex: 1 }}
                 >
-                  connect ↵
+                  {t('connect.btn_connect')}
                 </button>
               </div>
             </form>
@@ -260,6 +262,7 @@ export default function ConnectModal({ onConnected }) {
 // ── Token Komutu ──────────────────────────────────────────────────────
 
 function TokenButton() {
+  const { t } = useTranslation();
   const [showToken, setShowToken] = useState(false);
   const [token, setToken] = useState(() => localStorage.getItem('kickhat:saved_token') || '');
   const [saveToken, setSaveToken] = useState(() => !!localStorage.getItem('kickhat:saved_token'));
@@ -293,7 +296,7 @@ function TokenButton() {
         type="button"
         onClick={() => setShowToken(true)}
       >
-        {authToken ? '--token (değiştir)' : '--token'}
+        {authToken ? t('connect.btn_token_change') : t('connect.btn_token')}
       </button>
     );
   }
@@ -301,7 +304,7 @@ function TokenButton() {
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div className="terminal-line dim">
-        # Bearer token: kick.com → F12 → Network → Authorization başlığı
+        {t('connect.token_desc')}
       </div>
       <label className="terminal-prompt">
         <span className="terminal-ps1">token:</span>
@@ -322,7 +325,7 @@ function TokenButton() {
           onChange={(e) => setSaveToken(e.target.checked)} 
           style={{ accentColor: 'var(--kick-green)' }}
         />
-        Beni Hatırla (Token'i Kaydet)
+        {t('connect.remember_me')}
       </label>
       <div className="terminal-actions">
         <button
@@ -330,7 +333,7 @@ function TokenButton() {
           type="button"
           onClick={() => setShowToken(false)}
         >
-          iptal
+          {t('connect.btn_cancel')}
         </button>
         <button
           id="save-token-btn"
@@ -340,7 +343,7 @@ function TokenButton() {
           disabled={!token.trim()}
           style={{ flex: 1 }}
         >
-          kaydet ↵
+          {t('connect.btn_save')}
         </button>
       </div>
     </div>

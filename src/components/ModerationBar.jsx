@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../store/chatStore';
 
 // ── Icons ────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ const ViewersIcon = () => (
 );
 
 export default function ModerationBar({ view, onViewChange, onDisconnect }) {
+  const { t } = useTranslation();
   const { channelInfo, channelSlug, connected, connecting, settings } = useChatStore();
 
   const streamerName = channelInfo?.user?.username || channelSlug || '—';
@@ -52,7 +54,7 @@ export default function ModerationBar({ view, onViewChange, onDisconnect }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div className={`status-dot ${connected ? 'connected' : connecting ? 'connecting' : 'disconnected'}`} />
             <span className="status-text">
-              {connected ? 'Bağlı' : connecting ? 'Bağlanıyor...' : 'Bağlı değil'}
+              {connected ? (t('app.connected_status') || 'Bağlı') : connecting ? (t('app.connecting_status') || 'Bağlanıyor...') : (t('app.disconnected_status') || 'Bağlı değil')}
             </span>
             {viewers != null && viewers > 0 && (
               <>
@@ -71,14 +73,14 @@ export default function ModerationBar({ view, onViewChange, onDisconnect }) {
           className={`toggle-btn ${view === 'chat' ? 'active' : ''}`}
           onClick={() => onViewChange('chat')}
         >
-          Chat
+          {t('app.tab_chat') || 'Chat'}
         </button>
         {settings?.aiFeaturesEnabled && (
           <button 
             className={`toggle-btn ${view === 'analysis' ? 'active' : ''}`}
             onClick={() => onViewChange('analysis')}
           >
-            AI Analiz
+            {t('app.tab_ai') || 'AI Analiz'}
           </button>
         )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useChatStore } from '../store/chatStore';
 import OllamaManualModal from './OllamaManualModal';
+import { useTranslation } from 'react-i18next';
 
 // ── Tema paleti ────────────────────────────────────────────────────────────
 const THEMES = [
@@ -35,6 +36,36 @@ function ThemePicker({ value, onChange }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// ── Dil seçici ───────────────────────────────────────────────────────────
+function LanguagePicker({ value, onChange }) {
+  const langs = [
+    { id: 'tr', label: 'TR', name: 'Türkçe' },
+    { id: 'en', label: 'EN', name: 'English' },
+    { id: 'it', label: 'IT', name: 'Italiano' },
+    { id: 'es', label: 'ES', name: 'Español' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      {langs.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          className={`terminal-btn ${value?.startsWith(l.id) ? 'primary' : 'ghost'}`}
+          style={{ flex: 1, padding: '6px 0', fontSize: '12px' }}
+          onClick={() => {
+            onChange(l.id);
+            try { localStorage.setItem('kickhat:lang', l.id); } catch(e){}
+          }}
+          title={l.name}
+        >
+          {l.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -122,6 +153,7 @@ function SettingToggle({ label, checked, onChange }) {
 }
 
 export default function SettingsModal({ onClose }) {
+  const { t, i18n } = useTranslation();
   const { settings, setSetting, resetSettings, addToast, isDownloadingOllama, ollamaDownloadProgress, ollamaDownloadText, startOllamaDownload } = useChatStore();
   const [showOllamaManual, setShowOllamaManual] = useState(false);
 
@@ -142,25 +174,31 @@ export default function SettingsModal({ onClose }) {
         </div>
 
         <div className="settings-pop-body">
-          <div className="setting-label" style={{ marginBottom: 2 }}><span>Tema</span></div>
+          <div className="setting-label" style={{ marginBottom: 4 }}><span>{t('settings.language')}</span></div>
+          <LanguagePicker 
+            value={i18n.language} 
+            onChange={(id) => i18n.changeLanguage(id)} 
+          />
+
+          <div className="setting-label" style={{ marginBottom: 2 }}><span>{t('settings.theme')}</span></div>
           <ThemePicker value={settings.theme} onChange={(id) => setSetting('theme', id)} />
 
           <div className="settings-divider" />
 
           <SettingSlider
-            label="Yazı boyutu"
+            label={t('settings.font_size') || "Yazı boyutu"}
             value={settings.fontSize}
             min={10} max={20} step={1} unit="px"
             onChange={(v) => setSetting('fontSize', v)}
           />
           <SettingSlider
-            label="Satır aralığı"
+            label={t('settings.line_height') || "Satır aralığı"}
             value={settings.lineHeight}
             min={1} max={2.2} step={0.1} unit=""
             onChange={(v) => setSetting('lineHeight', Math.round(v * 10) / 10)}
           />
           <SettingSlider
-            label="Mesaj arası boşluk"
+            label={t('settings.msg_gap') || "Mesaj arası boşluk"}
             value={settings.messageGap}
             min={0} max={14} step={1} unit="px"
             onChange={(v) => setSetting('messageGap', v)}
@@ -169,12 +207,12 @@ export default function SettingsModal({ onClose }) {
           <div className="settings-divider" />
 
           <SettingToggle
-            label="Saat damgası"
+            label={t('settings.timestamp') || "Saat damgası"}
             checked={settings.timestamps}
             onChange={(v) => setSetting('timestamps', v)}
           />
           <SettingToggle
-            label="Sıkışık mod"
+            label={t('settings.compact_mode') || "Sıkışık mod"}
             checked={settings.compact}
             onChange={(v) => setSetting('compact', v)}
           />
@@ -182,16 +220,21 @@ export default function SettingsModal({ onClose }) {
           <div className="settings-divider" />
 
           <SettingSlider
-            label="AI Analiz Sıklığı"
+            label={t('settings.ai_interval') || "AI Analiz Sıklığı"}
             value={settings.aiAnalysisInterval}
             min={1} max={300} step={1} unit=" dk"
             onChange={(v) => setSetting('aiAnalysisInterval', v)}
           />
 
           <div className="settings-divider" />
-          <div className="setting-label" style={{ marginBottom: 4, color: 'var(--kick-green)' }}><span>Güncellemeler</span></div>
+          <div className="setting-label" style={{ marginBottom: 4, color: 'var(--kick-green)' }}><span>{t('settings.updates') || "Güncellemeler"}</span></div>
           <SettingToggle
-            label="Otomatik Güncellemeleri Denetle"
+            label={t('settings.games_active') || "Chat Oyunları (XP Sistemi)"}
+            checked={settings.games_active}
+            onChange={(v) => setSetting('games_active', v)}
+          />
+          <SettingToggle
+            label={t('settings.auto_update') || "Otomatik Güncellemeleri Denetle"}
             checked={settings.autoUpdateEnabled}
             onChange={(v) => setSetting('autoUpdateEnabled', v)}
           />
@@ -202,15 +245,15 @@ export default function SettingsModal({ onClose }) {
               onClick={() => useChatStore.getState().checkUpdate(true)}
               style={{ width: '100%' }}
             >
-              Güncellemeleri Denetle
+              {t('settings.check_update') || "Güncellemeleri Denetle"}
             </button>
           </div>
 
           <div className="settings-divider" />
-          <div className="setting-label" style={{ marginBottom: 4, color: 'var(--kick-green)' }}><span>Yapay Zeka (AI) Ayarları</span></div>
+          <div className="setting-label" style={{ marginBottom: 4, color: 'var(--kick-green)' }}><span>{t('settings.ai_settings') || "Yapay Zeka (AI) Ayarları"}</span></div>
           
           <SettingToggle
-            label="Yapay Zeka Özelliklerini Aktif Et"
+            label={t('settings.ai_enable') || "Yapay Zeka Özelliklerini Aktif Et"}
             checked={settings.aiFeaturesEnabled}
             onChange={(v) => setSetting('aiFeaturesEnabled', v)}
           />
@@ -218,21 +261,21 @@ export default function SettingsModal({ onClose }) {
           {settings.aiFeaturesEnabled && (
             <div style={{ marginTop: 8, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div className="setting-row" style={{ marginBottom: '8px' }}>
-                <span className="dim">Sağlayıcı:</span>
+                <span className="dim">{t('settings.provider') || "Sağlayıcı:"}</span>
                 <select 
                   className="terminal-input" 
                   style={{ width: '120px', padding: '2px 4px', fontSize: '12px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-main)', outline: 'none' }}
                   value={settings.aiApiProvider}
                   onChange={(e) => setSetting('aiApiProvider', e.target.value)}
                 >
-                  <option value="local" style={{ background: 'var(--bg-main)' }}>Yerel (Ollama)</option>
-                  <option value="custom" style={{ background: 'var(--bg-main)' }}>Özel API (Custom)</option>
+                  <option value="local" style={{ background: 'var(--bg-main)' }}>{t('settings.local') || "Yerel (Ollama)"}</option>
+                  <option value="custom" style={{ background: 'var(--bg-main)' }}>{t('settings.custom_api') || "Özel API (Custom)"}</option>
                 </select>
               </div>
 
               {settings.aiApiProvider === 'local' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span className="dim" style={{ fontSize: '11px', lineHeight: '1.3' }}>Yerel model kullanabilmek için bilgisayarınızda Ollama yüklü olmalı ve arka planda çalışmalıdır (llama3 modeli ile).</span>
+                  <span className="dim" style={{ fontSize: '11px', lineHeight: '1.3' }}>{t('settings.ollama_desc') || "Yerel model kullanabilmek için Ollama yüklü olmalı."}</span>
                   
                   {isDownloadingOllama ? (
                     <div style={{ width: '100%', height: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-dim)', borderRadius: '2px', overflow: 'hidden', marginTop: '4px', position: 'relative' }}>
@@ -249,7 +292,7 @@ export default function SettingsModal({ onClose }) {
                         onClick={startOllamaDownload}
                         style={{ padding: '2px 8px', fontSize: '11px', flex: 1 }}
                       >
-                        Otomatik İndir ve Kur
+                        {t('connect.download_auto') || "Otomatik İndir ve Kur"}
                       </button>
                       <button 
                         className="terminal-btn ghost" 
@@ -257,14 +300,14 @@ export default function SettingsModal({ onClose }) {
                         onClick={() => setShowOllamaManual(true)}
                         style={{ padding: '2px 8px', fontSize: '11px', flex: 1 }}
                       >
-                        Manuel Kurulum
+                        {t('connect.download_manual') || "Manuel Kurulum"}
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span className="dim" style={{ fontSize: '11px', lineHeight: '1.3', marginBottom: '4px' }}>OpenAI, Groq vb. OpenAI uyumlu API'leri kullanabilirsiniz.</span>
+                  <span className="dim" style={{ fontSize: '11px', lineHeight: '1.3', marginBottom: '4px' }}>{t('settings.custom_desc') || "OpenAI, Groq vb. uyumlu API'leri kullanabilirsiniz."}</span>
                   <label className="terminal-prompt" style={{ margin: 0, paddingLeft: 0 }}>
                     <span className="terminal-ps1" style={{ fontSize: '10px', minWidth: '40px' }}>URL:</span>
                     <input 
@@ -304,7 +347,7 @@ export default function SettingsModal({ onClose }) {
           <div className="settings-divider" />
 
           <button className="terminal-btn ghost" type="button" onClick={handleReset} style={{ width: '100%', marginTop: 4 }}>
-            --reset (varsayılan)
+            {t('settings.reset') || "--reset (varsayılan)"}
           </button>
         </div>
       </div>

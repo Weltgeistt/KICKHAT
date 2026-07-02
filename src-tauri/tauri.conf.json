@@ -41,7 +41,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://raw.githubusercontent.com/aftek/KICKHAT/main/updater.json"
+        "https://kickhat.com/public/downloads/updater.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4MTVGRTIzOTU1Qjk5ODAKUldTQW1WdVZJLzRWR0V0MUdGdklrR3NoSWdkZ000OXhEeURNaWFDYUhHaWVUbExBUWhHV2NDUlYK"
     }

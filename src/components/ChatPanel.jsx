@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../store/chatStore';
 import ChatMessage from './ChatMessage';
 import PinnedMessageBar from './PinnedMessageBar';
@@ -37,6 +38,7 @@ export default function ChatPanel() {
     canModerate,
     isSubscriber,
   } = useChatStore();
+  const { t } = useTranslation();
 
   // Abone modunda yalnızca abone / mod / yayıncı yazabilir
   const blockedBySubMode = subscribersMode && !canModerate && !isSubscriber;
@@ -264,10 +266,10 @@ export default function ChatPanel() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
             <div className="empty-state-title">
-              {filterText ? 'Eşleşen mesaj bulunamadı' : 'Chat mesajları burada görünecek'}
+              {filterText ? (t('chat.no_match') || 'Eşleşen mesaj bulunamadı') : (t('chat.empty_title') || 'Chat mesajları burada görünecek')}
             </div>
             <div className="empty-state-desc">
-              {filterText ? 'Farklı bir arama deneyin.' : 'Yayın aktifse mesajlar otomatik gelecek.'}
+              {filterText ? (t('chat.try_different') || 'Farklı bir arama deneyin.') : (t('chat.empty_desc') || 'Yayın aktifse mesajlar otomatik gelecek.')}
             </div>
           </div>
         ) : (
@@ -293,7 +295,7 @@ export default function ChatPanel() {
       <div className="chat-footer">
         {/* Toolbar */}
         <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
-          <span className="msg-count">{messages.length} mesaj</span>
+          <span className="msg-count">{t('chat.msg_count', { count: messages.length }) || `${messages.length} mesaj`}</span>
           <div style={{ flex: 1 }} />
           <button
             id="filter-toggle-btn"
@@ -352,15 +354,7 @@ export default function ChatPanel() {
               id="chat-send-input"
               className={`chat-input ${subscribersMode ? 'sub-mode' : ''} ${blockedBySubMode ? 'blocked' : ''}`}
               type="text"
-              placeholder={
-                !chatroomId
-                  ? 'Bağlantı yok'
-                  : blockedBySubMode
-                  ? '🔒 Abone modu — yazmak için abone olmalısın'
-                  : subscribersMode
-                  ? '🔒 Abone Modu aktif'
-                  : 'Mesaj gönder... (/ ile komut)'
-              }
+              placeholder={t('chat.placeholder') || "Mesaj gönder... (/ ile komut)"}
               value={chatInput}
               onChange={handleInputChange}
               onKeyDown={handleInputKeyDown}
@@ -373,7 +367,7 @@ export default function ChatPanel() {
               type="submit"
               disabled={!chatInput.trim() || !canChat || sending}
             >
-              {sending ? <span className="spinner" style={{ width: 12, height: 12 }} /> : 'Gönder'}
+              {sending ? <span className="spinner" style={{ width: 12, height: 12 }} /> : (t('chat.send') || 'Gönder')}
             </button>
           </form>
         </div>
