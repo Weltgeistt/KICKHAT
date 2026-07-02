@@ -64,6 +64,15 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS channel_commands (
+                channel_slug TEXT NOT NULL,
+                command_name TEXT NOT NULL,
+                response TEXT NOT NULL,
+                created_by TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (channel_slug, command_name)
+            );
+
             CREATE TABLE IF NOT EXISTS kick_tokens (
                 channel_slug TEXT PRIMARY KEY,
                 kick_user_id BIGINT,
@@ -419,6 +428,66 @@ async function setChannelSettings(channelSlug, settings) {
     }
 }
 
+// --- Kanal başına özel komutlar (!komutekle ile eklenir) ---
+
+async function getCustomCommands(channelSlug) {
+    try {
+        const res = await pool.query(
+            `SELECT command_name, response FROM channel_commands WHERE channel_slug = $1 ORDER BY command_name`,
+            [channelSlug]
+        );
+        return res.rows;
+    } catch (e) {
+        console.error("❌ Özel komutlar çekilemedi:", e.message);
+        return [];
+    }
+}
+
+async function setCustomCommand(channelSlug, commandName, response, createdBy) {
+    try {
+        await pool.query(
+            `INSERT INTO channel_commands (channel_slug, command_name, response, created_by)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (channel_slug, command_name) DO UPDATE SET response = $3, created_by = $4`,
+            [channelSlug, commandName.toLowerCase(), response, createdBy]
+        );
+        return true;
+    } catch (e) {
+        console.error("❌ Özel komut kaydedilemedi:", e.message);
+        return false;
+    }
+}
+
+async function deleteCustomCommand(channelSlug, commandName) {
+    try {
+        const res = await pool.query(
+            `DELETE FROM channel_commands WHERE channel_slug = $1 AND command_name = $2`,
+            [channelSlug, commandName.toLowerCase()]
+        );
+        return res.rowCount > 0;
+    } catch (e) {
+        console.error("❌ Özel komut silinemedi:", e.message);
+        return false;
+    }
+}
+
+// --- Kanal içi XP sırası ---
+
+async function getChannelRank(channelSlug, kickUsername) {
+    try {
+        const res = await pool.query(
+            `SELECT COUNT(*) + 1 AS rank FROM user_xp
+             WHERE channel_slug = $1
+               AND xp_points > (SELECT xp_points FROM user_xp WHERE channel_slug = $1 AND kick_username = $2)`,
+            [channelSlug, kickUsername]
+        );
+        return parseInt(res.rows[0]?.rank) || null;
+    } catch (e) {
+        console.error("❌ Kanal sırası çekilemedi:", e.message);
+        return null;
+    }
+}
+
 // --- Kick OAuth token saklama (kanal yetkilendirmeleri) ---
 
 async function saveKickTokens(channelSlug, { kick_user_id, access_token, refresh_token, expires_at, scopes }) {
@@ -483,5 +552,9 @@ module.exports = {
     setChannelSettings,
     getUserRole,
     saveKickTokens,
-    getKickTokens
+    getKickTokens,
+    getCustomCommands,
+    setCustomCommand,
+    deleteCustomCommand,
+    getChannelRank
 };

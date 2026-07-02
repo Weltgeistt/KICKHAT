@@ -7,6 +7,7 @@ const { generateVerificationCode, consumeVerifiedCode } = require('./auth');
 const { handleChatCommand } = require('./commands');
 const { addXP } = require('./games_and_xp');
 const { sendMessage } = require('./kick_api');
+const games = require('./games');
 const path = require('path');
 // Add standard node fetch if node version is < 18, but Node 20 has global fetch.
 
@@ -37,17 +38,29 @@ async function getCachedFlags() {
     return flagCache.data;
 }
 
-// Gelen her chat mesajını işler: komutlar + XP + Level Up bildirimi
-async function processMessage(channelSlug, chatroomId, username, content) {
+// Gelen her chat mesajını işler: komutlar + oyun tahminleri + XP + Level Up bildirimi
+async function processMessage(channelSlug, chatroomId, username, content, badges = []) {
     try {
         const flags = await getCachedFlags();
+        const gamesEnabled = flags.chat_games !== false;
+        const isMod = badges.some(b => b?.type === 'moderator');
+        const isBroadcaster = badges.some(b => b?.type === 'broadcaster');
 
         // Komutlar ("!" ile başlayanlar) — işlendiyse XP verme
-        const wasCommand = await handleChatCommand({ channelSlug, chatroomId, sender: username, content });
+        const wasCommand = await handleChatCommand({
+            channelSlug, chatroomId, sender: username, content,
+            isMod, isBroadcaster, gamesEnabled,
+        });
         if (wasCommand) return;
 
+        // Aktif kelime oyunu varsa tahmini kontrol et (kazanan bonus XP alır)
+        if (gamesEnabled && games.wordGameActive(channelSlug)) {
+            const won = await games.checkGuess(channelSlug, chatroomId, username, content);
+            if (won) return;
+        }
+
         // XP sistemi (global chat_games flag'i kapalıysa çalışmaz)
-        if (flags.chat_games !== false) {
+        if (gamesEnabled) {
             const xp = await addXP(channelSlug, username);
             if (xp?.leveledUp) {
                 await sendMessage(channelSlug, chatroomId, `🎉 @${username} seviye atladı! Yeni seviye: ${xp.newLevel} ⚡`);
@@ -88,7 +101,7 @@ function connectToChannel(channelSlug, chatroomId) {
             };
             if (dbMsg.username && dbMsg.content) {
                 saveMessage(dbMsg);
-                processMessage(channelSlug, chatroomId, dbMsg.username, dbMsg.content);
+                processMessage(channelSlug, chatroomId, dbMsg.username, dbMsg.content, msg.sender?.identity?.badges || []);
             }
         } catch (e) {
             console.error("Message parse error:", e);

@@ -75,16 +75,32 @@ async function getUserLevel(channelSlug, kickUsername) {
 }
 
 /**
- * AI destekli mini oyun başlatır (Örn: Hedef kelimeyi bulma veya rasgele kod üretip çekiliş yapma)
+ * Oyun/çekiliş ödülü olarak bonus XP ekler (seviye hesaplamasıyla birlikte).
  */
-async function startChatGame(channelSlug, gameType = 'guess_the_word') {
-    // TODO: Botrix tarzı oyun akışı burada kurgulanacak.
-    // Oyun başladığında Websocket ile web sitesindeki panele veri gidebilir.
-    console.log(`[OYUN] ${channelSlug} kanalında ${gameType} oyunu başlatıldı.`);
+async function addBonusXP(channelSlug, kickUsername, amount) {
+    try {
+        await pool.query(
+            `INSERT INTO user_xp (channel_slug, kick_username, xp_points, level)
+             VALUES ($1, $2, $3, 1)
+             ON CONFLICT (channel_slug, kick_username)
+             DO UPDATE SET xp_points = user_xp.xp_points + $3`,
+            [channelSlug, kickUsername, amount]
+        );
+        // Bonus sonrası seviye güncelle
+        await pool.query(
+            `UPDATE user_xp SET level = GREATEST(level, FLOOR(xp_points / 100.0) + 1)
+             WHERE channel_slug = $1 AND kick_username = $2`,
+            [channelSlug, kickUsername]
+        );
+        return true;
+    } catch (e) {
+        console.error("❌ Bonus XP eklenemedi:", e.message);
+        return false;
+    }
 }
 
 module.exports = {
     addXP,
     getUserLevel,
-    startChatGame
+    addBonusXP
 };

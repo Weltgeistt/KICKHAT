@@ -114,7 +114,7 @@ export default function ChannelStatsPage({ params }) {
         .bar {
           height: 100%;
           border-radius: 4px;
-          background: var(--brand-gradient);
+          background: var(--brand);
           transition: width 0.6s var(--ease);
         }
         .count {

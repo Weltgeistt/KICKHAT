@@ -41,10 +41,8 @@ export default function Home() {
           margin: 28px 0 20px;
         }
         .hero-title .grad {
-          background: var(--brand-gradient);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
+          color: var(--brand);
+          text-shadow: 0 0 30px var(--brand-glow);
         }
         .hero-desc {
           font-size: 18px;
@@ -80,7 +78,10 @@ export default function Home() {
           font-size: 12px;
           color: var(--text-3);
         }
-        .chat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); }
+        .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .t-dot.r { background: #ff4757; }
+        .t-dot.y { background: #ffa502; }
+        .t-dot.g { background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); }
         .chat-body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
         .msg { display: flex; gap: 10px; font-size: 14px; line-height: 1.5; }
         .msg .who { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
@@ -133,11 +134,7 @@ export default function Home() {
           font-family: var(--font-mono);
           font-size: 44px;
           font-weight: 700;
-          background: var(--brand-gradient);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          opacity: 0.9;
+          color: rgba(83, 252, 24, 0.18);
           line-height: 1;
           margin-bottom: 18px;
         }
@@ -196,7 +193,10 @@ export default function Home() {
         >
           <div className="chat-window">
             <div className="chat-head">
-              <span className="chat-dot" /> kick.com/poyland — chat
+              <span className="t-dot r" />
+              <span className="t-dot y" />
+              <span className="t-dot g" />
+              <span style={{ marginLeft: 8 }}>bash — kickhat_core · kick.com/poyland</span>
             </div>
             <div className="chat-body">
               <div className="msg">
