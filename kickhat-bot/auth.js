@@ -46,11 +46,8 @@ async function verifyCodeFromChat(sender, code) {
 
     // Doğrulama başarılı! Kullanıcıyı DB'ye ekle veya var olanı güncelle
     try {
-        const { Pool } = require('pg');
-        const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/kickhat' });
-        
         // Kullanıcıyı users tablosuna kaydet
-        await pool.query(
+        await db.pool.query(
             `INSERT INTO users (kick_username, role) VALUES ($1, 'user') ON CONFLICT (kick_username) DO NOTHING`,
             [sender.toLowerCase()]
         );

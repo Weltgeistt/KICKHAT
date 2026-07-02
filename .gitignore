@@ -40,6 +40,7 @@ publish-update.cjs
 kickhat-bot/vip.json
 .env
 .env.*
+!.env.example
 
 # ---- Veri dokumleri / test ciktilari (repoya girmesin) ----
 messages_export.json
