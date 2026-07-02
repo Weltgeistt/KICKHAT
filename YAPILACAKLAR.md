@@ -7,12 +7,10 @@
 
 ## 🟡 Bekleyen Görevler (Sıradaki)
 
-- [ ] ⭐ dev.kick.com'dan app oluştur (client_id/secret al) → bot'un chate YAZABİLMESİ için gerekli.
-      Sunucuda `.env` içine `KICK_CLIENT_ID` ve `KICK_CLIENT_SECRET` eklenecek (bkz: kickhat-bot/.env.example)
 - [ ] Chat oyunları — `!kelimetahmin`, `!cekilis` komutları (altyapı hazır: commands.js'e eklenecek)
-- [ ] Stats sayfasına kanal renk teması eklenmesi (Kick yeşili korunsun ama branding olsun)
-- [ ] Website admin paneline giriş koruması (şu an panel herkese açık; sadece proxy API key gizli)
-- [ ] Sunucuya deploy: yeni bot kodu + website (Next.js) yayına alınacak
+- [ ] AI moderasyonu sunucuda aktifleştir (`OPENAI_API_KEY` sunucu .env'inde boş)
+- [ ] API_KEY'i güçlü bir değerle değiştir (masaüstü uygulamayla birlikte güncellenmeli)
+- [ ] Deploy scriptlerini SSH key auth'a geçir (şifre düz metin duruyor)
 
 ---
 
@@ -35,6 +33,12 @@
 - [x] Level Up bildirimi — seviye atlayınca chate mesaj gidiyor (gönderim yapılandırılınca aktif)
 - [x] Pool bug'ı düzeltildi (auth.js ve games_and_xp.js her çağrıda yeni bağlantı havuzu açıyordu)
 - [x] .gitignore düzeltildi — root şifreli deploy scriptleri ve vip.json artık gerçekten gizli
+- [x] Website v2 (2 Temmuz 2026): yeni "Aurora Dark" tasarım — landing, docs, downloads,
+      leaderboard, kanal stats/modlogs, !verify girişi, yayıncı paneli, korumalı admin, TR/EN, SEO
+      (eski tasarıma dönüş: git tag `eski-tasarim`)
+- [x] DEPLOY (2 Temmuz 2026): kickhat.net canlıda — bot (pm2: kickhat-bot, :3000) +
+      website (pm2: kickhat-web, :3001) + nginx → Next. Kick Dev API OAuth doğrulandı,
+      XP sistemi canlı izleyicilere işliyor
 
 ---
 
