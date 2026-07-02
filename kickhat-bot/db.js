@@ -63,6 +63,16 @@ async function initDB() {
                 reason TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS kick_tokens (
+                channel_slug TEXT PRIMARY KEY,
+                kick_user_id BIGINT,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_at TIMESTAMP,
+                scopes TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
         console.log("✅ Veritabanı (PostgreSQL) hazır.");
     } catch (e) {
@@ -409,6 +419,35 @@ async function setChannelSettings(channelSlug, settings) {
     }
 }
 
+// --- Kick OAuth token saklama (kanal yetkilendirmeleri) ---
+
+async function saveKickTokens(channelSlug, { kick_user_id, access_token, refresh_token, expires_at, scopes }) {
+    try {
+        await pool.query(
+            `INSERT INTO kick_tokens (channel_slug, kick_user_id, access_token, refresh_token, expires_at, scopes, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW())
+             ON CONFLICT (channel_slug) DO UPDATE SET
+                kick_user_id = $2, access_token = $3, refresh_token = $4,
+                expires_at = $5, scopes = $6, updated_at = NOW()`,
+            [channelSlug.toLowerCase(), kick_user_id, access_token, refresh_token, expires_at, scopes]
+        );
+        return true;
+    } catch (e) {
+        console.error("❌ Kick token kaydedilemedi:", e.message);
+        return false;
+    }
+}
+
+async function getKickTokens(channelSlug) {
+    try {
+        const res = await pool.query(`SELECT * FROM kick_tokens WHERE channel_slug = $1`, [channelSlug.toLowerCase()]);
+        return res.rows[0] || null;
+    } catch (e) {
+        console.error("❌ Kick token okunamadı:", e.message);
+        return null;
+    }
+}
+
 // --- Kullanıcı rolü (admin koruması için) ---
 
 async function getUserRole(kickUsername) {
@@ -442,5 +481,7 @@ module.exports = {
     getGlobalLeaderboard,
     getChannelSettings,
     setChannelSettings,
-    getUserRole
+    getUserRole,
+    saveKickTokens,
+    getKickTokens
 };

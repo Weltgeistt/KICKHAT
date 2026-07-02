@@ -165,6 +165,10 @@ export const dictionaries = {
       success: "Doğrulandı! Yönlendiriliyorsun…",
       error: "Bir hata oluştu. Tekrar dene.",
       invalidUser: "Geçerli bir kullanıcı adı gir (3-25 karakter, harf/rakam/alt çizgi).",
+      or: "veya",
+      kick: "Kick ile Bağlan",
+      kickDesc: "Yayıncıysan önerilen yol: kanalını tek tıkla bağla, bot chatine yazabilsin.",
+      kickError: "Kick bağlantısı başarısız oldu. Tekrar dene.",
     },
     panel: {
       title: "Yayıncı Paneli",
@@ -360,6 +364,10 @@ export const dictionaries = {
       success: "Verified! Redirecting…",
       error: "Something went wrong. Try again.",
       invalidUser: "Enter a valid username (3-25 chars, letters/digits/underscore).",
+      or: "or",
+      kick: "Connect with Kick",
+      kickDesc: "Streamer? Recommended: link your channel in one click so the bot can write in your chat.",
+      kickError: "Kick connection failed. Try again.",
     },
     panel: {
       title: "Streamer Panel",

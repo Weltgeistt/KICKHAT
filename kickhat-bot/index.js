@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pusher } = require('pusher-js');
-const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats, getAdminOverview, getFeatureFlags, setFeatureFlag, getGlobalLeaderboard, getChannelSettings, setChannelSettings, getUserRole } = require('./db');
+const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats, getAdminOverview, getFeatureFlags, setFeatureFlag, getGlobalLeaderboard, getChannelSettings, setChannelSettings, getUserRole, saveKickTokens } = require('./db');
 const { generateVerificationCode, consumeVerifiedCode } = require('./auth');
 const { handleChatCommand } = require('./commands');
 const { addXP } = require('./games_and_xp');
@@ -268,6 +268,71 @@ async function start() {
         if (!result.verified) return res.json({ verified: false });
         const role = await getUserRole(result.kick_username);
         res.json({ verified: true, kick_username: result.kick_username, role });
+    });
+
+    // 🔗 Kick OAuth: authorization code'u token'a çevirir ve kanalı "bağlanmış" yapar.
+    // Kanal bu yetkiyi verince bot o kanala resmi API ile mesaj atabilir.
+    app.post('/api/kick/exchange', async (req, res) => {
+        const { code, code_verifier, redirect_uri } = req.body || {};
+        if (!code || !code_verifier || !redirect_uri) {
+            return res.status(400).json({ error: 'code, code_verifier ve redirect_uri gerekli' });
+        }
+        try {
+            const tokenRes = await fetch('https://id.kick.com/oauth/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    grant_type: 'authorization_code',
+                    client_id: process.env.KICK_CLIENT_ID,
+                    client_secret: process.env.KICK_CLIENT_SECRET,
+                    redirect_uri,
+                    code,
+                    code_verifier,
+                }),
+            });
+            const token = await tokenRes.json();
+            if (!tokenRes.ok || !token.access_token) {
+                console.error('❌ Kick token exchange hatası:', JSON.stringify(token).slice(0, 300));
+                return res.status(502).json({ error: 'Kick token exchange başarısız' });
+            }
+
+            // Token sahibinin kanalını öğren (slug + user id)
+            let slug = null, userId = null;
+            const chRes = await fetch('https://api.kick.com/public/v1/channels', {
+                headers: { Authorization: `Bearer ${token.access_token}` },
+            });
+            if (chRes.ok) {
+                const ch = await chRes.json();
+                slug = ch?.data?.[0]?.slug || null;
+                userId = ch?.data?.[0]?.broadcaster_user_id || null;
+            }
+            if (!slug) {
+                const uRes = await fetch('https://api.kick.com/public/v1/users', {
+                    headers: { Authorization: `Bearer ${token.access_token}` },
+                });
+                if (uRes.ok) {
+                    const u = await uRes.json();
+                    slug = (u?.data?.[0]?.name || '').toLowerCase() || null;
+                    userId = u?.data?.[0]?.user_id || userId;
+                }
+            }
+            if (!slug) return res.status(502).json({ error: 'Kick kullanıcı bilgisi alınamadı' });
+
+            await saveKickTokens(slug, {
+                kick_user_id: userId,
+                access_token: token.access_token,
+                refresh_token: token.refresh_token || null,
+                expires_at: new Date(Date.now() + (token.expires_in || 3600) * 1000).toISOString(),
+                scopes: token.scope || '',
+            });
+
+            const role = await getUserRole(slug);
+            console.log(`🔗 Kick kanalı bağlandı: ${slug} (user_id: ${userId})`);
+            res.json({ username: slug, kick_user_id: userId, role });
+        } catch (e) {
+            console.error('❌ Kick exchange hatası:', e.message);
+            res.status(500).json({ error: 'Exchange sırasında hata: ' + e.message });
+        }
     });
 
     // 🎛️ Kanal bot ayarları (yayıncı paneli — sahiplik kontrolü website tarafında)

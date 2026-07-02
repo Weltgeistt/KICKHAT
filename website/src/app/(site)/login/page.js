@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { KeyRound, MessageSquare, CheckCircle2, Loader2 } from "lucide-react";
+import { KeyRound, MessageSquare, CheckCircle2, Loader2, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLang } from "@/components/LanguageProvider";
@@ -17,6 +17,13 @@ export default function LoginPage() {
   const pollRef = useRef(null);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
+
+  // Kick OAuth dönüş hatası (?error=kick_*) varsa göster
+  useEffect(() => {
+    const err = new URLSearchParams(window.location.search).get("error");
+    if (err?.startsWith("kick")) setError(t("login.kickError"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function start(e) {
     e.preventDefault();
@@ -78,7 +85,23 @@ export default function LoginPage() {
         }
         h1 { font-size: 28px; margin-bottom: 10px; }
         .sub { color: var(--text-2); font-size: 14.5px; margin-bottom: 28px; }
-        form { display: flex; flex-direction: column; gap: 14px; }
+        .kick-desc { font-size: 12.5px; color: var(--text-3); margin-bottom: 4px; }
+        .divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 18px 0;
+          color: var(--text-3);
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        .divider::before, .divider::after {
+          content: "";
+          flex: 1;
+          height: 1px;
+          background: var(--line);
+        }
         .err { color: var(--danger); font-size: 13.5px; }
         .code-box {
           margin: 20px 0;
@@ -126,20 +149,26 @@ export default function LoginPage() {
 
         <AnimatePresence mode="wait">
           {step === "form" && (
-            <motion.form key="form" onSubmit={start} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <input
-                className="input"
-                placeholder={t("login.username")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoFocus
-              />
-              {error && <span className="err">{error}</span>}
-              <button className="btn btn-primary" disabled={busy} type="submit">
-                {busy ? <Loader2 size={16} className="spin" /> : <MessageSquare size={16} />}
-                {t("login.start")}
-              </button>
-            </motion.form>
+            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <a href="/api/kick/connect" className="btn btn-primary" style={{ width: "100%", marginBottom: 6 }}>
+                <Zap size={16} /> {t("login.kick")}
+              </a>
+              <p className="kick-desc">{t("login.kickDesc")}</p>
+              <div className="divider"><span>{t("login.or")}</span></div>
+              <form onSubmit={start} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <input
+                  className="input"
+                  placeholder={t("login.username")}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+                {error && <span className="err">{error}</span>}
+                <button className="btn btn-ghost" disabled={busy} type="submit">
+                  {busy ? <Loader2 size={16} className="spin" /> : <MessageSquare size={16} />}
+                  {t("login.start")}
+                </button>
+              </form>
+            </motion.div>
           )}
 
           {step === "code" && (
