@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderasyon Logları | KICKHAT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #080d14;
+            --surface: #0d1520;
+            --surface2: #111c2d;
+            --border: rgba(255,255,255,0.06);
+            --primary: #53ff1c;
+            --primary-dim: rgba(83,255,28,0.12);
+            --primary-glow: rgba(83,255,28,0.35);
+            --warn-color: #f59e0b;
+            --warn-dim: rgba(245,158,11,0.12);
+            --timeout-color: #f97316;
+            --timeout-dim: rgba(249,115,22,0.12);
+            --ban-color: #ef4444;
+            --ban-dim: rgba(239,68,68,0.12);
+            --text: #f0f4ff;
+            --muted: #5a6a80;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* BG */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(83,255,28,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(83,255,28,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        .bg-grid-highlight {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(83,255,28,0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(83,255,28,0.15) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+            -webkit-mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+        }
+        .bg-glow {
+            position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 900px; height: 500px;
+            background: radial-gradient(ellipse, rgba(83,255,28,0.05) 0%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .page {
+            position: relative; z-index: 1;
+            max-width: 1000px; margin: 0 auto;
+            padding: 2.5rem 1.5rem 5rem;
+        }
+
+        /* HEADER */
+        header {
+            text-align: center; margin-bottom: 2.5rem;
+            animation: slideDown .6s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        .logo-badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: var(--primary-dim); border: 1px solid rgba(83,255,28,0.2);
+            border-radius: 999px; padding: .35rem 1rem;
+            font-size: .8rem; font-weight: 700; letter-spacing: 1.5px;
+            color: var(--primary); text-transform: uppercase; margin-bottom: 1rem;
+        }
+        h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900;
+            background: linear-gradient(135deg, #fff 30%, #ff6b6b 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; line-height: 1.1; margin-bottom: .5rem;
+        }
+        .subtitle { color: var(--muted); font-size: 1rem; }
+
+        /* SUMMARY CARDS */
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 1rem; margin-bottom: 2rem;
+            animation: fadeUp .6s .1s both;
+        }
+        .summary-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.25rem;
+            display: flex; flex-direction: column; gap: .3rem;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .summary-card:hover { transform: translateY(-3px); }
+        .summary-card .card-icon { font-size: 1.6rem; }
+        .summary-card .card-val {
+            font-size: 2rem; font-weight: 900; line-height: 1;
+        }
+        .summary-card .card-lbl { font-size: .8rem; font-weight: 600; color: var(--muted); }
+        .card-total   { border-color: rgba(83,255,28,0.25); }
+        .card-total   .card-val { color: var(--primary); }
+        .card-warning { border-color: rgba(245,158,11,0.25); }
+        .card-warning .card-val { color: var(--warn-color); }
+        .card-timeout { border-color: rgba(249,115,22,0.25); }
+        .card-timeout .card-val { color: var(--timeout-color); }
+        .card-ban     { border-color: rgba(239,68,68,0.25); }
+        .card-ban     .card-val { color: var(--ban-color); }
+
+        /* FILTERS */
+        .filters-wrap {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem; display: flex;
+            flex-wrap: wrap; gap: 1rem; align-items: center;
+            animation: fadeUp .6s .15s both;
+        }
+        .filter-group { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 160px; }
+        .filter-group label {
+            font-size: .75rem; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: .8px; white-space: nowrap;
+        }
+        .filter-select, .filter-input {
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text); font-family: 'Inter', sans-serif;
+            font-size: .9rem; font-weight: 500;
+            padding: .4rem .75rem; border-radius: .6rem;
+            outline: none; transition: border-color .2s; flex: 1;
+            color-scheme: dark;
+        }
+        .filter-select:hover, .filter-input:hover,
+        .filter-select:focus, .filter-input:focus { border-color: rgba(83,255,28,0.35); }
+        input[type="date"].filter-input { min-width: 130px; }
+
+        .btn-filter {
+            background: var(--primary); color: #000;
+            border: none; font-family: 'Inter', sans-serif;
+            font-size: .9rem; font-weight: 700;
+            padding: .5rem 1.25rem; border-radius: .6rem;
+            cursor: pointer; white-space: nowrap;
+            transition: box-shadow .2s;
+        }
+        .btn-filter:hover { box-shadow: 0 0 14px var(--primary-glow); }
+        .btn-reset {
+            background: none; color: var(--muted);
+            border: 1px solid var(--border); font-family: 'Inter', sans-serif;
+            font-size: .85rem; font-weight: 600;
+            padding: .45rem .9rem; border-radius: .6rem;
+            cursor: pointer; transition: color .2s, border-color .2s;
+        }
+        .btn-reset:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+        /* TABLE */
+        .table-wrap {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 1.25rem; overflow: hidden;
+            animation: fadeUp .6s .2s both;
+        }
+        .table-head {
+            display: grid;
+            grid-template-columns: 180px 1fr 130px 140px 160px;
+            padding: .85rem 1.25rem;
+            font-size: .72rem; font-weight: 700;
+            letter-spacing: 1.2px; text-transform: uppercase;
+            color: var(--muted); border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+        .table-row {
+            display: grid;
+            grid-template-columns: 180px 1fr 130px 140px 160px;
+            padding: .85rem 1.25rem; align-items: center;
+            border-bottom: 1px solid var(--border);
+            transition: background .2s;
+            animation: rowIn .3s ease both;
+        }
+        .table-row:last-child { border-bottom: none; }
+        .table-row:hover { background: rgba(255,255,255,0.025); }
+
+        .col-user { display: flex; align-items: center; gap: .6rem; font-weight: 600; }
+        .col-user .avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--surface2); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .8rem; font-weight: 700; color: var(--muted); flex-shrink: 0;
+        }
+        .col-reason { color: var(--muted); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .col-date { font-size: .82rem; color: var(--muted); }
+
+        /* ACTION BADGES */
+        .badge {
+            display: inline-flex; align-items: center; gap: .35rem;
+            padding: .25rem .7rem; border-radius: 999px;
+            font-size: .78rem; font-weight: 700; letter-spacing: .5px;
+        }
+        .badge-warning { background: var(--warn-dim); color: var(--warn-color); border: 1px solid rgba(245,158,11,0.25); }
+        .badge-timeout { background: var(--timeout-dim); color: var(--timeout-color); border: 1px solid rgba(249,115,22,0.25); }
+        .badge-ban     { background: var(--ban-dim); color: var(--ban-color); border: 1px solid rgba(239,68,68,0.25); }
+
+        /* EMPTY / LOADING */
+        .state-msg { padding: 4rem 2rem; text-align: center; color: var(--muted); }
+        .state-msg .icon { font-size: 2.5rem; margin-bottom: .75rem; }
+        .spinner {
+            width: 34px; height: 34px; border: 3px solid var(--border);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin .7s linear infinite; margin: 0 auto 1rem;
+        }
+
+        /* RESULT COUNT */
+        .result-info {
+            font-size: .82rem; color: var(--muted);
+            text-align: right; margin-bottom: .5rem;
+            animation: fadeUp .4s ease both;
+        }
+        .result-info strong { color: var(--text); }
+
+        /* FOOTER */
+        footer {
+            text-align: center; margin-top: 2.5rem;
+            color: var(--muted); font-size: .8rem;
+        }
+        footer strong { color: var(--primary); }
+        footer a { color: var(--muted); text-decoration: none; margin: 0 .5rem; }
+        footer a:hover { color: var(--text); }
+
+        /* ANIMATIONS */
+        @keyframes slideDown { from { opacity:0; transform:translateY(-24px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeUp    { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
+        @keyframes rowIn     { from { opacity:0; transform:translateX(-8px);  } to { opacity:1; transform:translateX(0); } }
+        @keyframes spin      { to { transform: rotate(360deg); } }
+
+        @media (max-width: 750px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .table-head, .table-row { grid-template-columns: 140px 1fr 100px; }
+            .col-reason, .col-date { display: none; }
+            h1 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-grid-highlight"></div>
+<div class="bg-glow"></div>
+
+<div class="page">
+
+    <header>
+        <div class="logo-badge"><span>🎩</span> KICKHAT</div>
+        <h1 id="pageTitle">Moderasyon Logları</h1>
+        <p class="subtitle">Kanal yönetim geçmişi — uyarılar, timeout'lar ve banlar</p>
+    </header>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid" id="summaryGrid">
+        <div class="summary-card card-total">
+            <div class="card-icon">📋</div>
+            <div class="card-val" id="sum-total">—</div>
+            <div class="card-lbl">Toplam İşlem</div>
+        </div>
+        <div class="summary-card card-warning">
+            <div class="card-icon">⚠️</div>
+            <div class="card-val" id="sum-warning">—</div>
+            <div class="card-lbl">Uyarı</div>
+        </div>
+        <div class="summary-card card-timeout">
+            <div class="card-icon">⏱️</div>
+            <div class="card-val" id="sum-timeout">—</div>
+            <div class="card-lbl">Timeout</div>
+        </div>
+        <div class="summary-card card-ban">
+            <div class="card-icon">🔨</div>
+            <div class="card-val" id="sum-ban">—</div>
+            <div class="card-lbl">Ban</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-wrap">
+        <div class="filter-group">
+            <label>İşlem</label>
+            <select id="filterAction" class="filter-select">
+                <option value="all">Tümü</option>
+                <option value="warning">Uyarı</option>
+                <option value="timeout">Timeout</option>
+                <option value="ban">Ban</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Kullanıcı</label>
+            <input type="text" id="filterUser" class="filter-input" placeholder="kullanıcı ara...">
+        </div>
+        <div class="filter-group">
+            <label>Başlangıç</label>
+            <input type="date" id="filterFrom" class="filter-input">
+        </div>
+        <div class="filter-group">
+            <label>Bitiş</label>
+            <input type="date" id="filterTo" class="filter-input">
+        </div>
+        <button class="btn-filter" id="btnApply">Filtrele</button>
+        <button class="btn-reset"  id="btnReset">Sıfırla</button>
+    </div>
+
+    <!-- Result count -->
+    <p class="result-info" id="resultInfo" style="display:none"></p>
+
+    <!-- Table -->
+    <div class="table-wrap">
+        <div class="table-head">
+            <div>Kullanıcı</div>
+            <div>Sebep</div>
+            <div>İşlem</div>
+            <div>Tarih</div>
+            <div>Saat</div>
+        </div>
+        <div id="logBody">
+            <div class="state-msg"><div class="spinner"></div><p>Yükleniyor...</p></div>
+        </div>
+    </div>
+
+    <footer>
+        Powered by <strong>KICKHAT</strong>
+        <br><br>
+        <a id="statsLink" href="#">📊 İstatistikler</a>
+    </footer>
+
+</div>
+
+<script>
+const pathParts = window.location.pathname.split('/');
+const channel = pathParts[1] && pathParts[1] !== 'public' ? pathParts[1] : (new URLSearchParams(location.search).get('channel') || '');
+
+// Stats link
+document.getElementById('statsLink').href = `/${channel}/stats`;
+
+document.addEventListener('mousemove', (e) => {
+    document.documentElement.style.setProperty('--x', e.clientX + 'px');
+    document.documentElement.style.setProperty('--y', e.clientY + 'px');
+});
+
+if (channel) {
+    document.getElementById('pageTitle').textContent = channel.toUpperCase() + ' — Moderasyon Logları';
+} else {
+    document.getElementById('logBody').innerHTML = `
+        <div class="state-msg">
+            <div class="icon">⚠️</div>
+            <p>URL sonuna <code>?channel=kanaladi</code> ekleyin</p>
+        </div>`;
+}
+
+/* ── Summary ── */
+async function loadSummary() {
+    if (!channel) return;
+    try {
+        const r = await fetch(`/api/modlogs/${channel}/summary`);
+        const d = await r.json();
+        document.getElementById('sum-total').textContent   = d.total.toLocaleString('tr-TR');
+        document.getElementById('sum-warning').textContent = d.warning.toLocaleString('tr-TR');
+        document.getElementById('sum-timeout').textContent = d.timeout.toLocaleString('tr-TR');
+        document.getElementById('sum-ban').textContent     = d.ban.toLocaleString('tr-TR');
+    } catch(_) {}
+}
+
+/* ── Logs ── */
+async function loadLogs() {
+    if (!channel) return;
+    document.getElementById('logBody').innerHTML = `
+        <div class="state-msg"><div class="spinner"></div><p>Yükleniyor...</p></div>`;
+    document.getElementById('resultInfo').style.display = 'none';
+
+    const action   = document.getElementById('filterAction').value;
+    const username = document.getElementById('filterUser').value.trim();
+    const from     = document.getElementById('filterFrom').value;
+    const to       = document.getElementById('filterTo').value;
+
+    const q = new URLSearchParams();
+    if (action && action !== 'all') q.set('action', action);
+    if (username) q.set('username', username);
+    if (from)     q.set('from', from);
+    if (to)       q.set('to', to);
+
+    try {
+        const r    = await fetch(`/api/modlogs/${channel}?${q}`);
+        const data = await r.json();
+        renderLogs(data);
+    } catch(e) {
+        document.getElementById('logBody').innerHTML = `
+            <div class="state-msg"><div class="icon">❌</div><p>Sunucuya ulaşılamadı</p></div>`;
+    }
+}
+
+function renderLogs(data) {
+    const ri = document.getElementById('resultInfo');
+    ri.style.display = 'block';
+    ri.innerHTML = `<strong>${data.length}</strong> kayıt bulundu`;
+
+    if (!data.length) {
+        document.getElementById('logBody').innerHTML = `
+            <div class="state-msg">
+                <div class="icon">🔍</div>
+                <p>Bu filtrelerle eşleşen kayıt bulunamadı</p>
+            </div>`;
+        return;
+    }
+
+    const badgeMap = {
+        warning: `<span class="badge badge-warning">⚠️ Uyarı</span>`,
+        timeout: `<span class="badge badge-timeout">⏱️ Timeout</span>`,
+        ban:     `<span class="badge badge-ban">🔨 Ban</span>`,
+    };
+
+    const html = data.map((log, i) => {
+        const d       = new Date(log.created_at);
+        const dateStr = d.toLocaleDateString('tr-TR', { day:'2-digit', month:'short', year:'numeric' });
+        const timeStr = d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+        const badge   = badgeMap[log.action] || `<span class="badge">${log.action}</span>`;
+        const delay   = Math.min(i * 25, 600);
+
+        return `
+        <div class="table-row" style="animation-delay:${delay}ms">
+            <div class="col-user">
+                <div class="avatar">${log.kick_username[0].toUpperCase()}</div>
+                ${escHtml(log.kick_username)}
+            </div>
+            <div class="col-reason">${escHtml(log.reason || '—')}</div>
+            <div>${badge}</div>
+            <div class="col-date">${dateStr}</div>
+            <div class="col-date">${timeStr}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('logBody').innerHTML = html;
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Filter buttons ── */
+document.getElementById('btnApply').addEventListener('click', loadLogs);
+document.getElementById('filterUser').addEventListener('keydown', e => { if (e.key === 'Enter') loadLogs(); });
+
+document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('filterAction').value = 'all';
+    document.getElementById('filterUser').value   = '';
+    document.getElementById('filterFrom').value   = '';
+    document.getElementById('filterTo').value     = '';
+    loadLogs();
+});
+
+/* ── Init ── */
+document.addEventListener('mousemove', e => {
+    document.documentElement.style.setProperty('--x', e.clientX + 'px');
+    document.documentElement.style.setProperty('--y', e.clientY + 'px');
+});
+
+if (channel) {
+    loadSummary();
+    loadLogs();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KICKHAT | Akıllı Sohbet Analizi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #000000;
+            --surface: #050505;
+            --border: #111111;
+            --border-active: rgba(83, 252, 24, 0.4);
+            --primary: #53fc18;
+            --primary-glow: rgba(83, 252, 24, 0.35);
+            --text: #eaeaea;
+            --muted: #777777;
+            --radius: 0px;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; overflow: hidden;
+            position: relative;
+        }
+        .bg-grid {
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(83,252,24,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(83,252,24,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .bg-grid-highlight {
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(83,252,24,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(83,252,24,0.25) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+            -webkit-mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+        }
+        .glow-orb {
+            position: absolute; top: 50%; left: 50%;
+            width: 400px; height: 400px; background: var(--primary);
+            filter: blur(150px); opacity: 0.15; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 0; pointer-events: none;
+        }
+        .container {
+            position: relative; z-index: 1;
+            max-width: 600px; width: 100%; padding: 2rem;
+            text-align: center; animation: fadeUp 0.6s ease both;
+        }
+        .logo { margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .logo img { width: 220px; height: auto; border-radius: 24px; box-shadow: 0 10px 40px rgba(83, 252, 24, 0.15); transition: transform 0.3s; }
+        .logo img:hover { transform: scale(1.02); }
+        .logo span { font-size: 3rem; font-weight: 800; letter-spacing: -1px; }
+        .logo span.hat { color: var(--primary); }
+        .subtitle { font-size: 1.1rem; color: var(--muted); margin-bottom: 3rem; line-height: 1.5; font-weight: 400; }
+        
+        .search-box {
+            background: var(--surface); border: 1px solid var(--border);
+            padding: .5rem; border-radius: var(--radius);
+            display: flex; gap: .5rem; transition: box-shadow 0.3s, border-color 0.3s;
+        }
+        .search-box:focus-within { box-shadow: 0 0 20px var(--primary-glow); border-color: var(--border-active); }
+        .search-box input {
+            flex: 1; background: transparent; border: none;
+            color: white; font-family: 'Inter', sans-serif;
+            font-size: 1.1rem; padding: .8rem 1rem; outline: none;
+        }
+        .search-box input::placeholder { color: var(--muted); }
+        
+        .btn {
+            background: var(--primary); color: #000;
+            border: none; border-radius: var(--radius);
+            font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700;
+            padding: 0 1.5rem; cursor: pointer; transition: transform 0.2s, background 0.2s;
+        }
+        .btn:hover { background: #60ff2a; transform: scale(1.02); }
+
+        .quick-links { margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .link-card {
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 1rem 1.5rem; border-radius: var(--radius); cursor: pointer;
+            transition: all 0.2s; font-weight: 600; font-size: .9rem; color: var(--muted);
+        }
+        .link-card:hover { border-color: var(--border-active); color: var(--primary); background: rgba(83,252,24,0.05); }
+
+        .app-download {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; gap: 1rem;
+        }
+        .app-download p { color: var(--muted); font-size: 0.95rem; }
+        .btn-download {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 0.8rem 1.5rem; font-family: 'Inter', sans-serif;
+            font-weight: 600; text-decoration: none; transition: all 0.2s;
+        }
+        .btn-download:hover { border-color: var(--primary); color: var(--primary); background: rgba(83,252,24,0.05); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-grid-highlight"></div>
+    <div class="glow-orb"></div>
+    
+    <div class="container">
+        <div class="logo">
+            <img src="/public/logo.png" alt="Kickhat Logo">
+        </div>
+        <p class="subtitle">Yayıncılar ve moderatörler için akıllı sohbet istatistikleri ve analiz platformu.</p>
+        
+        <form class="search-box" id="searchForm">
+            <input type="text" id="channelInput" placeholder="Kanal adını girin (örn: haxi35)" required autocomplete="off">
+            <button type="submit" class="btn">Git</button>
+        </form>
+
+        <div class="quick-links">
+            <div class="link-card" onclick="navigate('dashboard')">🖥️ Dashboard</div>
+            <div class="link-card" onclick="navigate('stats')">📊 İstatistikler</div>
+            <div class="link-card" onclick="navigate('modlogs')">🛡️ Mod Logları</div>
+        </div>
+        </div>
+
+        <div class="app-download">
+            <p>Daha gelişmiş analizler ve yapay zeka destekli anlık moderasyon araçları için masaüstü uygulamamızı indirin.</p>
+            <a href="https://kickhat.com/public/downloads/KICKHAT-Setup.exe" target="_blank" class="btn-download">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Windows için İndir
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let currentTarget = 'dashboard';
+
+        function navigate(target) {
+            currentTarget = target;
+            document.querySelectorAll('.link-card').forEach(c => c.style.borderColor = 'rgba(255,255,255,0.05)');
+            event.currentTarget.style.borderColor = 'var(--primary)';
+            event.currentTarget.style.color = 'var(--primary)';
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const channel = document.getElementById('channelInput').value.trim().toLowerCase();
+            if(channel) {
+                window.location.href = `/${channel}/${currentTarget}`;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            document.documentElement.style.setProperty('--x', e.clientX + 'px');
+            document.documentElement.style.setProperty('--y', e.clientY + 'px');
+        });
+    </script>
+</body>
+</html>

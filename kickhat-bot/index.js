@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pusher } = require('pusher-js');
-const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics } = require('./db');
+const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats } = require('./db');
 const path = require('path');
 // Add standard node fetch if node version is < 18, but Node 20 has global fetch.
 
@@ -85,9 +85,71 @@ async function start() {
     // Sunucu başlar başlamaz VIP kanallara gir
     await connectToVipChannels();
 
-    app.get('/', (req, res) => res.send('Kickhat Bot is running.'));
+    app.use('/public', express.static(path.join(__dirname, 'public')));
 
-    // Güvenlik Middleware (Sadece bizim uygulamamız erişebilir)
+    // Ana Sayfa (Landing Page)
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
+    // Temiz URL Yönlendirmeleri
+    app.get('/:channel_slug/dashboard', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+    });
+    
+    app.get('/:channel_slug/stats', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'stats.html'));
+    });
+
+    app.get('/:channel_slug/modlogs', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'modlogs.html'));
+    });
+
+    app.get('/:channel_slug', (req, res) => {
+        res.redirect(`/${req.params.channel_slug}/dashboard`);
+    });
+
+    // 🌐 Herkese Açık Endpoint'ler (Auth gerekmez)
+    // Top Chatters istatistiklerini getiren endpoint
+    app.get('/api/stats/:channel_slug', async (req, res) => {
+        const { channel_slug } = req.params;
+        const period = req.query.period || 'all';
+        const from   = req.query.from   || null;
+        const to     = req.query.to     || null;
+        const stats  = await getChatStatistics(channel_slug, period, from, to);
+        res.json(stats);
+    });
+
+    // Moderasyon loglarını getiren endpoint
+    app.get('/api/modlogs/:channel_slug', async (req, res) => {
+        const { channel_slug } = req.params;
+        const filters = {
+            action:   req.query.action   || null,
+            username: req.query.username || null,
+            from:     req.query.from     || null,
+            to:       req.query.to       || null,
+            limit:    parseInt(req.query.limit) || 200,
+        };
+        const logs = await getModerationLogs(channel_slug, filters);
+        res.json(logs);
+    });
+
+    // Moderasyon özeti (toplam uya rı/ban/timeout sayıları)
+    app.get('/api/modlogs/:channel_slug/summary', async (req, res) => {
+        const { channel_slug } = req.params;
+        const summary = await getModerationSummary(channel_slug);
+        res.json(summary);
+    });
+
+    // Yayıncı Dashboard endpoint'i
+    app.get('/api/dashboard/:channel_slug', async (req, res) => {
+        const { channel_slug } = req.params;
+        const data = await getDashboardStats(channel_slug);
+        if (!data) return res.status(500).json({ error: 'Dashboard verisi alınamadı' });
+        res.json(data);
+    });
+
+    // 🔒 Güvenlik Middleware (Sadece bizim uygulamamız erişebilir)
     app.use((req, res, next) => {
         const key = req.headers['x-api-key'] || req.query.key;
         if (key !== API_KEY) {
@@ -116,13 +178,7 @@ async function start() {
         res.json(messages);
     });
 
-    // Top Chatters istatistiklerini getiren endpoint
-    app.get('/api/stats/:channel_slug', async (req, res) => {
-        const { channel_slug } = req.params;
-        const period = req.query.period || 'all';
-        const stats = await getChatStatistics(channel_slug, period);
-        res.json(stats);
-    });
+
 
     app.listen(PORT, () => {
         console.log(`🚀 Kickhat Bot API çalışıyor: http://localhost:${PORT}`);

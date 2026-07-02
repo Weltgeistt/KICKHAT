@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yayıncı Dashboard | KICKHAT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #000000;
+            --surface: #050505;
+            --surface2: #090909;
+            --surface3: #111111;
+            --border: #111111;
+            --primary: #53fc18;
+            --primary-dim: rgba(83,252,24,0.12);
+            --primary-glow: rgba(83,252,24,0.35);
+            --blue: #70a1ff;
+            --purple: #a020f0;
+            --orange: #ffa502;
+            --red: #ff4757;
+            --yellow: #eab308;
+            --text: #eaeaea;
+            --muted: #777777;
+            --muted2: #444444;
+            --radius: 0px;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+        /* BG */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(83,255,28,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(83,255,28,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        .bg-grid-highlight {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(83,252,24,0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(83,252,24,0.15) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+            -webkit-mask-image: radial-gradient(300px circle at var(--x, 50%) var(--y, 50%), black, transparent);
+        }
+
+        /* LAYOUT */
+        .page { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+        /* TOP BAR */
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+            animation: fadeDown .5s ease both;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 1rem; }
+        .logo-badge {
+            display: inline-flex; align-items: center; gap: .4rem;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: .3rem .6rem;
+            font-size: .85rem; font-weight: 800; letter-spacing: 1.5px;
+            color: var(--text); text-transform: uppercase; text-decoration: none;
+        }
+        .logo-badge span { color: var(--primary); }
+        .channel-name {
+            font-size: 1.5rem; font-weight: 800;
+            color: var(--text);
+        }
+        .topbar-nav { display: flex; gap: .5rem; flex-wrap: wrap; }
+        .nav-btn {
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); font-family: 'Inter', sans-serif;
+            font-size: .82rem; font-weight: 600;
+            padding: .4rem 1rem; border-radius: var(--radius);
+            cursor: pointer; text-decoration: none;
+            transition: all .2s; display: inline-flex; align-items: center; gap: .4rem;
+        }
+        .nav-btn:hover { border-color: rgba(83,252,24,0.4); color: var(--text); }
+        .refresh-btn {
+            background: var(--primary-dim); border: 1px solid rgba(83,252,24,0.4);
+            color: var(--primary);
+        }
+        .refresh-btn:hover { background: rgba(83,255,28,0.2); }
+        .live-badge {
+            display: inline-flex; align-items: center; gap: .4rem;
+            font-size: .75rem; font-weight: 700; color: var(--primary);
+            padding: .3rem .8rem; border-radius: 999px;
+            background: var(--primary-dim); border: 1px solid rgba(83,255,28,0.2);
+        }
+        .live-dot { width: 7px; height: 7px; background: var(--primary); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+
+        /* KPI CARDS */
+        .kpi-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: .9rem; margin-bottom: 1.5rem;
+            animation: fadeUp .5s .05s both;
+        }
+        .kpi-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1rem;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .kpi-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: var(--border); transition: background .3s;
+        }
+        .kpi-card:hover::before { background: var(--c-color); }
+        .kpi-green   { --c-color: var(--primary); }
+        .kpi-blue    { --c-color: var(--blue); }
+        .kpi-purple  { --c-color: var(--purple); }
+        .kpi-orange  { --c-color: var(--orange); }
+        .kpi-red     { --c-color: var(--red); }
+        .kpi-label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: .5rem; }
+        .kpi-val { font-size: 1.9rem; font-weight: 900; line-height: 1; }
+        .kpi-green  .kpi-val  { color: var(--primary); }
+        .kpi-blue   .kpi-val  { color: var(--blue); }
+        .kpi-purple .kpi-val  { color: var(--purple); }
+
+        /* GRID LAYOUT */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .main-grid .full-width { grid-column: 1 / -1; }
+
+        /* PANEL */
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.5rem;
+            display: flex; flex-direction: column;
+        }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .card-title {
+            font-size: 1.1rem; font-weight: 700; color: var(--text);
+            display: flex; align-items: center; gap: .5rem;
+        }
+        .card-title .icon { color: var(--primary); }
+
+        /* CHARTS */
+        .chart-container { position: relative; height: 200px; }
+
+        /* TOP CHATTERS */
+        .chatter-row {
+            display: grid; grid-template-columns: 28px 28px 1fr auto;
+            align-items: center; gap: .75rem;
+            padding: .6rem 0; border-bottom: 1px solid var(--border);
+        }
+        .chatter-row:last-child { border-bottom: none; }
+        .c-rank { font-size: .82rem; font-weight: 800; color: var(--muted); text-align: center; }
+        .c-av {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--surface3); display: flex; align-items: center; justify-content: center;
+            font-size: .8rem; font-weight: 700; color: var(--muted2);
+            border: 1px solid var(--border); flex-shrink: 0;
+        }
+        .c-name { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .c-count {
+            font-size: .8rem; font-weight: 700; font-family: monospace;
+            background: var(--primary-dim); color: var(--primary);
+            padding: .15rem .5rem; border-radius: .4rem;
+        }
+        .rank-1 .c-rank { color: #ffd700; }
+        .rank-2 .c-rank { color: #c0c0c0; }
+        .rank-3 .c-rank { color: #cd7f32; }
+
+        /* MOD LOGS */
+        .mod-row {
+            display: flex; align-items: flex-start; gap: .75rem;
+            padding: .6rem 0; border-bottom: 1px solid var(--border);
+        }
+        .mod-row:last-child { border-bottom: none; }
+        .mod-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
+        .mod-info { flex: 1; min-width: 0; }
+        .mod-user { font-size: .88rem; font-weight: 700; }
+        .mod-reason { font-size: .78rem; color: var(--muted2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mod-time { font-size: .72rem; color: var(--muted); flex-shrink: 0; }
+        .badge-sm {
+            font-size: .68rem; font-weight: 700; padding: .15rem .5rem; border-radius: 999px;
+        }
+        .badge-warning { background: rgba(234,179,8,.12); color: #eab308; }
+        .badge-timeout { background: rgba(249,115,22,.12); color: #f97316; }
+        .badge-ban     { background: rgba(239,68,68,.12);  color: #ef4444; }
+
+        /* EMPTY */
+        .empty-state { padding: 2.5rem 1rem; text-align: center; color: var(--muted); }
+        .empty-state .icon { font-size: 2rem; margin-bottom: .5rem; }
+        .spinner-wrap { padding: 3rem; text-align: center; }
+        .spinner {
+            width: 32px; height: 32px; border: 3px solid var(--border);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin .7s linear infinite; margin: 0 auto 1rem;
+        }
+
+        /* FOOTER */
+        footer { text-align: center; margin-top: 2rem; color: var(--muted); font-size: .78rem; }
+        footer strong { color: var(--primary); }
+
+        /* ANIMATIONS */
+        @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin     { to { transform: rotate(360deg); } }
+        @keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+        @media (max-width: 900px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-grid-highlight"></div>
+
+<div class="page">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <a href="/" class="logo-badge">KICK<span>HAT</span></a>
+            <div class="channel-name" id="channelName">Dashboard</div>
+            <div class="live-badge" style="border-radius: 0px;"><span class="live-dot"></span> CANLI</div>
+        </div>
+        <div class="topbar-nav">
+            <a class="nav-btn" id="statsLink" href="#">📊 İstatistikler</a>
+            <a class="nav-btn" id="modlogsLink" href="#">🛡️ Mod Logları</a>
+            <button class="nav-btn refresh-btn" id="refreshBtn">🔄 Yenile</button>
+            <a class="nav-btn" href="https://kickhat.com/public/downloads/KICKHAT-Setup.exe" target="_blank" style="border-color: var(--primary); color: var(--primary);">📥 Uygulamayı İndir</a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card kpi-green">
+            <div class="kpi-label">Bugünkü Mesajlar</div>
+            <div class="kpi-val" id="kpi-today">—</div>
+            <div class="kpi-sub" id="kpi-today-users">— aktif kullanıcı</div>
+            <div class="kpi-icon">💬</div>
+        </div>
+        <div class="kpi-card kpi-blue">
+            <div class="kpi-label">Bu Haftaki Mesajlar</div>
+            <div class="kpi-val" id="kpi-week">—</div>
+            <div class="kpi-sub" id="kpi-week-users">— farklı kullanıcı</div>
+            <div class="kpi-icon">📈</div>
+        </div>
+        <div class="kpi-card kpi-purple">
+            <div class="kpi-label">Toplam Mesajlar</div>
+            <div class="kpi-val" id="kpi-total">—</div>
+            <div class="kpi-sub">Tüm zamanlar</div>
+            <div class="kpi-icon">🗄️</div>
+        </div>
+        <div class="kpi-card kpi-orange">
+            <div class="kpi-label">Bugün/Hafta Oranı</div>
+            <div class="kpi-val" id="kpi-ratio">—</div>
+            <div class="kpi-sub">Günlük aktivite yüzdesi</div>
+            <div class="kpi-icon">⚡</div>
+        </div>
+        <div class="kpi-card kpi-yellow">
+            <div class="kpi-label">Son Güncelleme</div>
+            <div class="kpi-val" style="font-size:1rem;margin-top:.4rem" id="kpi-time">—</div>
+            <div class="kpi-sub">Otomatik 60s yenileme</div>
+            <div class="kpi-icon">🕐</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="main-grid">
+        <!-- Hourly Activity -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">⏱️ Son 24 Saat — Saatlik Aktivite</div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Trend -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📅 Son 7 Gün — Günlük Trend</div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Chatters -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🏆 Top 5 Chatter <span style="font-weight:400;color:var(--muted);font-size:.75rem">(Bu Hafta)</span></div>
+                <a class="nav-btn" id="fullStatsLink" href="#" style="font-size:.75rem;padding:.25rem .7rem">Tümünü Gör →</a>
+            </div>
+            <div class="card-body" id="topChatters">
+                <div class="spinner-wrap"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Recent Mod Logs -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🛡️ Son Moderasyon Aksiyonları</div>
+                <a class="nav-btn" id="fullModLink" href="#" style="font-size:.75rem;padding:.25rem .7rem">Tümünü Gör →</a>
+            </div>
+            <div class="card-body" id="recentMods">
+                <div class="spinner-wrap"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>Powered by <strong>KICKHAT</strong> &nbsp;·&nbsp; Veriler her 60 saniyede güncellenir</footer>
+</div>
+
+<script>
+const pathParts = window.location.pathname.split('/');
+// path: /haxi35/dashboard -> parts: ["", "haxi35", "dashboard"]
+const channel = pathParts[1] && pathParts[1] !== 'public' ? pathParts[1] : (new URLSearchParams(location.search).get('channel') || '');
+let refreshTimer;
+let hourlyChart, dailyChart;
+
+// Links
+document.getElementById('statsLink').href    = `/${channel}/stats`;
+document.getElementById('modlogsLink').href  = `/${channel}/modlogs`;
+document.getElementById('fullStatsLink').href = `/${channel}/stats`;
+document.getElementById('fullModLink').href  = `/${channel}/modlogs`;
+
+document.addEventListener('mousemove', (e) => {
+    document.documentElement.style.setProperty('--x', e.clientX + 'px');
+    document.documentElement.style.setProperty('--y', e.clientY + 'px');
+});
+
+if (channel) {
+    document.getElementById('channelName').textContent = channel.toUpperCase() + ' Dashboard';
+}
+
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5a72', font: { family: 'Outfit', size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5a72', font: { family: 'Outfit', size: 10 } }, beginAtZero: true }
+    }
+};
+
+/* ── Load ── */
+async function loadDashboard() {
+    if (!channel) return;
+    try {
+        const r    = await fetch(`/api/dashboard/${channel}`);
+        const data = await r.json();
+        render(data);
+    } catch(e) {
+        console.error('Dashboard yüklenemedi:', e);
+    }
+}
+
+function fmt(n) { return Number(n).toLocaleString('tr-TR'); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function render(d) {
+    // KPI
+    document.getElementById('kpi-today').textContent       = fmt(d.today_messages);
+    document.getElementById('kpi-today-users').textContent = `${fmt(d.today_users)} aktif kullanıcı`;
+    document.getElementById('kpi-week').textContent        = fmt(d.week_messages);
+    document.getElementById('kpi-week-users').textContent  = `${fmt(d.week_users)} farklı kullanıcı`;
+    document.getElementById('kpi-total').textContent       = fmt(d.total_messages);
+    const ratio = d.week_messages > 0 ? Math.round((d.today_messages / d.week_messages) * 100) : 0;
+    document.getElementById('kpi-ratio').textContent       = `%${ratio}`;
+    document.getElementById('kpi-time').textContent        = new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+
+    // Hourly Chart
+    renderHourlyChart(d.hourly_activity);
+
+    // Daily Chart
+    renderDailyChart(d.daily_trend);
+
+    // Top Chatters
+    renderTopChatters(d.top_chatters);
+
+    // Recent Mods
+    renderRecentMods(d.recent_mods);
+}
+
+function renderHourlyChart(rows) {
+    // Build 24-slot map
+    const map = {};
+    rows.forEach(r => {
+        const h = new Date(r.hour).getHours();
+        map[h] = parseInt(r.count);
+    });
+    const labels = Array.from({length:24}, (_,i) => `${i.toString().padStart(2,'0')}:00`);
+    const data   = Array.from({length:24}, (_,i) => map[i] || 0);
+
+    if (hourlyChart) { hourlyChart.data.datasets[0].data = data; hourlyChart.update(); return; }
+    hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data, fill: true,
+                borderColor: '#53ff1c',
+                backgroundColor: 'rgba(83,255,28,0.08)',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.4,
+            }]
+        },
+        options: { ...chartDefaults }
+    });
+}
+
+function renderDailyChart(rows) {
+    const labels = rows.map(r => new Date(r.day).toLocaleDateString('tr-TR', {day:'numeric', month:'short'}));
+    const data   = rows.map(r => parseInt(r.count));
+
+    if (dailyChart) { dailyChart.data.labels = labels; dailyChart.data.datasets[0].data = data; dailyChart.update(); return; }
+    dailyChart = new Chart(document.getElementById('dailyChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: 'rgba(59,130,246,0.5)',
+                borderColor: '#3b82f6',
+                borderWidth: 1.5,
+                borderRadius: 5,
+            }]
+        },
+        options: { ...chartDefaults }
+    });
+}
+
+function renderTopChatters(rows) {
+    if (!rows.length) {
+        document.getElementById('topChatters').innerHTML = `
+            <div class="empty-state"><div class="icon">😶</div><p>Bu hafta hiç mesaj yok</p></div>`;
+        return;
+    }
+    const html = rows.map((u, i) => {
+        const rankClass = i < 3 ? `rank-${i+1}` : '';
+        const medals = ['🥇','🥈','🥉'];
+        return `
+        <div class="chatter-row ${rankClass}">
+            <div class="c-rank">${medals[i] || `#${i+1}`}</div>
+            <div class="c-av">${u.username[0].toUpperCase()}</div>
+            <div class="c-name">${escHtml(u.username)}</div>
+            <div class="c-count">${fmt(u.count)}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('topChatters').innerHTML = html;
+}
+
+function renderRecentMods(rows) {
+    if (!rows.length) {
+        document.getElementById('recentMods').innerHTML = `
+            <div class="empty-state"><div class="icon">✅</div><p>Henüz moderasyon aksiyonu yok</p></div>`;
+        return;
+    }
+    const icons   = { warning: '⚠️', timeout: '⏱️', ban: '🔨' };
+    const badges  = { warning: 'badge-warning', timeout: 'badge-timeout', ban: 'badge-ban' };
+    const labels  = { warning: 'Uyarı', timeout: 'Timeout', ban: 'Ban' };
+    const html = rows.map(m => {
+        const t = new Date(m.created_at).toLocaleString('tr-TR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        return `
+        <div class="mod-row">
+            <div class="mod-icon">${icons[m.action] || '🔧'}</div>
+            <div class="mod-info">
+                <div class="mod-user">${escHtml(m.kick_username)} <span class="badge-sm ${badges[m.action]}">${labels[m.action]}</span></div>
+                <div class="mod-reason">${escHtml(m.reason || 'Sebep belirtilmedi')}</div>
+            </div>
+            <div class="mod-time">${t}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('recentMods').innerHTML = html;
+}
+
+/* ── Controls ── */
+document.getElementById('refreshBtn').addEventListener('click', () => {
+    loadDashboard();
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(loadDashboard, 3000);
+});
+
+/* ── Init ── */
+document.addEventListener('mousemove', e => {
+    document.documentElement.style.setProperty('--x', e.clientX + 'px');
+    document.documentElement.style.setProperty('--y', e.clientY + 'px');
+});
+
+if (channel) {
+    loadDashboard();
+    refreshTimer = setInterval(loadDashboard, 3000);
+} else {
+    document.getElementById('channelName').textContent = 'Kanal Belirtilmedi';
+}
+</script>
+</body>
+</html>
