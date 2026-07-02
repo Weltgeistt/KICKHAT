@@ -5,6 +5,10 @@ const db = require('./db');
 // Format: { "123456": { kick_username: "user1", expires: timestamp } }
 const pendingVerifications = {};
 
+// Chat'ten doğrulanmış kodlar — website'in giriş akışı bunları poll eder
+// Format: { "123456": { kick_username: "user1", expires: timestamp } }
+const verifiedCodes = {};
+
 /**
  * Kullanıcının sitesinde gördüğü 6 haneli rastgele bir doğrulama kodu üretir.
  * @param {string} kick_username - Bağlanmak istenen Kick kullanıcı adı
@@ -52,9 +56,13 @@ async function verifyCodeFromChat(sender, code) {
             [sender.toLowerCase()]
         );
         
-        // Kullanıldıktan sonra kodu sil
+        // Kullanıldıktan sonra kodu bekleyenlerden çıkar, doğrulanmışlara taşı
         delete pendingVerifications[code];
-        
+        verifiedCodes[code] = {
+            kick_username: sender.toLowerCase(),
+            expires: Date.now() + 5 * 60 * 1000 // Site 5 dk içinde teslim almalı
+        };
+
         return { success: true, message: "Hesap başarıyla bağlandı!" };
     } catch (e) {
         console.error("Auth DB Hatası:", e);
@@ -72,9 +80,30 @@ setInterval(() => {
             delete pendingVerifications[code];
         }
     }
+    for (const code in verifiedCodes) {
+        if (now > verifiedCodes[code].expires) {
+            delete verifiedCodes[code];
+        }
+    }
 }, 60 * 1000); // Her 1 dakikada bir temizle
+
+/**
+ * Website giriş akışı: kod chat'ten doğrulandı mı diye bakar.
+ * Doğrulandıysa kodu tüketir (tek kullanımlık) ve kullanıcıyı döndürür.
+ * @param {string} code - 6 haneli kod
+ * @returns {{verified: boolean, kick_username?: string}}
+ */
+function consumeVerifiedCode(code) {
+    const record = verifiedCodes[code];
+    if (!record || Date.now() > record.expires) {
+        return { verified: false };
+    }
+    delete verifiedCodes[code]; // Tek kullanımlık
+    return { verified: true, kick_username: record.kick_username };
+}
 
 module.exports = {
     generateVerificationCode,
-    verifyCodeFromChat
+    verifyCodeFromChat,
+    consumeVerifiedCode
 };

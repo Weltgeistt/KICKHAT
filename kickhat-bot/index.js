@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pusher } = require('pusher-js');
-const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats, getAdminOverview, getFeatureFlags, setFeatureFlag } = require('./db');
+const { initDB, saveMessage, markMessageDeleted, getUserMessages, getChatStatistics, getModerationLogs, getModerationSummary, getDashboardStats, getAdminOverview, getFeatureFlags, setFeatureFlag, getGlobalLeaderboard, getChannelSettings, setChannelSettings, getUserRole } = require('./db');
+const { generateVerificationCode, consumeVerifiedCode } = require('./auth');
 const { handleChatCommand } = require('./commands');
 const { addXP } = require('./games_and_xp');
 const { sendMessage } = require('./kick_api');
@@ -183,6 +184,13 @@ async function start() {
         res.json(data);
     });
 
+    // Global XP liderlik tablosu (herkese açık)
+    app.get('/api/leaderboard', async (req, res) => {
+        const limit = parseInt(req.query.limit) || 50;
+        const rows = await getGlobalLeaderboard(limit);
+        res.json(rows);
+    });
+
     // 🔒 Güvenlik Middleware (Sadece bizim uygulamamız erişebilir)
     app.use((req, res, next) => {
         const key = req.headers['x-api-key'] || req.query.key;
@@ -239,6 +247,48 @@ async function start() {
         const ok = await setFeatureFlag(feature_name, is_enabled);
         if (!ok) return res.status(500).json({ error: 'Flag güncellenemedi' });
         res.json({ feature_name, is_enabled });
+    });
+
+    // 🔐 Website Giriş Akışı (API key korumalı — website sunucusu çağırır)
+    // 1) Site kullanıcı adı için kod üretir → kullanıcı chate "!verify <kod>" yazar
+    app.post('/api/auth/start', (req, res) => {
+        const { kick_username } = req.body;
+        if (!kick_username || !/^[a-zA-Z0-9_]{3,25}$/.test(kick_username)) {
+            return res.status(400).json({ error: 'Geçerli bir kick_username gerekli' });
+        }
+        const code = generateVerificationCode(kick_username);
+        res.json({ code, expires_in: 600 });
+    });
+
+    // 2) Site kodun chat'ten doğrulanmasını poll eder; doğrulanınca rolüyle döner
+    app.get('/api/auth/status', async (req, res) => {
+        const { code } = req.query;
+        if (!code) return res.status(400).json({ error: 'code gerekli' });
+        const result = consumeVerifiedCode(code);
+        if (!result.verified) return res.json({ verified: false });
+        const role = await getUserRole(result.kick_username);
+        res.json({ verified: true, kick_username: result.kick_username, role });
+    });
+
+    // 🎛️ Kanal bot ayarları (yayıncı paneli — sahiplik kontrolü website tarafında)
+    app.get('/api/channel/:channel_slug/settings', async (req, res) => {
+        const settings = await getChannelSettings(req.params.channel_slug);
+        if (!settings) return res.status(500).json({ error: 'Ayarlar alınamadı' });
+        res.json(settings);
+    });
+
+    app.post('/api/channel/:channel_slug/settings', async (req, res) => {
+        const { ai_moderation_enabled, strictness_level, app_language, games_enabled } = req.body || {};
+        const patch = {};
+        if (typeof ai_moderation_enabled === 'boolean') patch.ai_moderation_enabled = ai_moderation_enabled;
+        if ([1, 2, 3].includes(strictness_level)) patch.strictness_level = strictness_level;
+        if (['tr', 'en', 'es', 'it', 'de'].includes(app_language)) patch.app_language = app_language;
+        if (typeof games_enabled === 'boolean') patch.games_enabled = games_enabled;
+        if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Güncellenecek geçerli alan yok' });
+
+        const ok = await setChannelSettings(req.params.channel_slug, patch);
+        if (!ok) return res.status(500).json({ error: 'Ayarlar kaydedilemedi' });
+        res.json(await getChannelSettings(req.params.channel_slug));
     });
 
 

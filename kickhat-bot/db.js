@@ -346,6 +346,84 @@ async function setFeatureFlag(featureName, isEnabled) {
     }
 }
 
+// --- Liderlik Tablosu ---
+
+async function getGlobalLeaderboard(limit = 50) {
+    try {
+        const res = await pool.query(
+            `SELECT kick_username,
+                    SUM(xp_points)::int AS total_xp,
+                    MAX(level)::int     AS best_level,
+                    COUNT(DISTINCT channel_slug)::int AS channel_count
+             FROM user_xp
+             GROUP BY kick_username
+             ORDER BY total_xp DESC
+             LIMIT $1`,
+            [Math.min(limit, 100)]
+        );
+        return res.rows;
+    } catch (e) {
+        console.error("❌ Liderlik tablosu çekilemedi:", e.message);
+        return [];
+    }
+}
+
+// --- Kanal Bot Ayarları (yayıncı paneli için) ---
+
+const DEFAULT_CHANNEL_SETTINGS = {
+    ai_moderation_enabled: true,
+    strictness_level: 2,
+    app_language: 'tr',
+    games_enabled: true,
+};
+
+async function getChannelSettings(channelSlug) {
+    try {
+        const res = await pool.query(
+            `SELECT ai_moderation_enabled, strictness_level, app_language, games_enabled
+             FROM bot_settings WHERE channel_slug = $1`,
+            [channelSlug]
+        );
+        if (res.rows.length === 0) return { channel_slug: channelSlug, ...DEFAULT_CHANNEL_SETTINGS };
+        return { channel_slug: channelSlug, ...res.rows[0] };
+    } catch (e) {
+        console.error("❌ Kanal ayarları çekilemedi:", e.message);
+        return null;
+    }
+}
+
+async function setChannelSettings(channelSlug, settings) {
+    try {
+        const merged = { ...DEFAULT_CHANNEL_SETTINGS, ...(await getChannelSettings(channelSlug) || {}), ...settings };
+        await pool.query(
+            `INSERT INTO bot_settings (channel_slug, ai_moderation_enabled, strictness_level, app_language, games_enabled)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (channel_slug) DO UPDATE SET
+                ai_moderation_enabled = $2, strictness_level = $3, app_language = $4, games_enabled = $5`,
+            [channelSlug, merged.ai_moderation_enabled, merged.strictness_level, merged.app_language, merged.games_enabled]
+        );
+        return true;
+    } catch (e) {
+        console.error("❌ Kanal ayarları kaydedilemedi:", e.message);
+        return false;
+    }
+}
+
+// --- Kullanıcı rolü (admin koruması için) ---
+
+async function getUserRole(kickUsername) {
+    try {
+        const res = await pool.query(
+            `SELECT role FROM users WHERE kick_username = $1`,
+            [kickUsername.toLowerCase()]
+        );
+        return res.rows[0]?.role || 'user';
+    } catch (e) {
+        console.error("❌ Kullanıcı rolü çekilemedi:", e.message);
+        return 'user';
+    }
+}
+
 module.exports = {
     pool,
     initDB,
@@ -360,5 +438,9 @@ module.exports = {
     getDashboardStats,
     getAdminOverview,
     getFeatureFlags,
-    setFeatureFlag
+    setFeatureFlag,
+    getGlobalLeaderboard,
+    getChannelSettings,
+    setChannelSettings,
+    getUserRole
 };
